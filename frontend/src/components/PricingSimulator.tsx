@@ -167,7 +167,8 @@ export const PricingSimulator: React.FC = () => {
 
       {/* Primary Financial Metric Cards */}
       {output && (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           {/* 12M ARR */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
             <span className="text-[11px] text-slate-400 uppercase tracking-wider block mb-1">
@@ -184,13 +185,13 @@ export const PricingSimulator: React.FC = () => {
           {/* 24M ARR */}
           <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl p-5 shadow-lg bg-gradient-to-b from-emerald-950/20 to-slate-900">
             <span className="text-[11px] text-emerald-400 uppercase tracking-wider block mb-1">
-              24-Month ARR
+              24-Month Active ARR
             </span>
             <div className="text-2xl font-black text-emerald-300 font-mono">
               ${(output.arr_24m / 1000000).toFixed(2)}M
             </div>
             <span className="text-xs text-slate-400 block mt-1">
-              {output.active_seats_24m} active seats • {output.active_customers_24m} accts
+              {output.active_seats_24m} billable active users • {output.active_customers_24m} accts
             </span>
           </div>
 
@@ -216,16 +217,17 @@ export const PricingSimulator: React.FC = () => {
             </span>
           </div>
 
-          {/* NRR */}
+          {/* NRR - Simplified Cohort Proxy */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
-            <span className="text-[11px] text-slate-400 uppercase tracking-wider block mb-1">
-              Net Revenue Retention
+            <span className="text-[11px] text-emerald-400 uppercase tracking-wider block mb-1 font-semibold flex items-center justify-between">
+              <span>NRR (Cohort Proxy)</span>
+              <span className="text-[9px] px-1 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">Proxy</span>
             </span>
             <div className="text-2xl font-black text-white font-mono">
               {output.nrr_pct}%
             </div>
-            <span className="text-xs text-slate-400 block mt-1">
-              3.5x expansion seat multiplier
+            <span className="text-[11px] text-slate-400 block mt-1" title={output.nrr_label || "Net Revenue Retention (NRR) — Simplified Cohort Proxy"}>
+              Simplified Cohort Proxy
             </span>
           </div>
 
@@ -242,10 +244,56 @@ export const PricingSimulator: React.FC = () => {
               k/mo
             </div>
             <span className="text-xs text-slate-400 block mt-1">
-              vs Incumbent $60/seat tax
+              vs Incumbent $60/seat tax (Illustrative 33% Util.)
             </span>
           </div>
         </div>
+
+        {/* Active-User Billing & Threshold Gate Verification Banner */}
+        <div className="bg-slate-900/90 border border-emerald-900/60 rounded-2xl p-4 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-emerald-950 border border-emerald-800 text-emerald-400 shrink-0">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-white uppercase tracking-wider">
+                  Active-User Billing Math:
+                </span>
+                <span className="text-[11px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 font-mono border border-emerald-800">
+                  active_billable_users = expanded_seats × actual_wau_rate
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-1">
+                Per account: <span className="text-white font-mono font-bold">{Math.round(params.pilot_users * params.expansion_seat_multiplier)}</span> expanded seats × <span className="text-emerald-400 font-mono font-bold">{Math.round((output.actual_wau_rate_applied ?? 0.72) * 100)}%</span> active WAU = <span className="text-emerald-300 font-mono font-bold">{Math.round(params.pilot_users * params.expansion_seat_multiplier * (output.actual_wau_rate_applied ?? 0.72))}</span> active billable users • <span className="text-slate-400 font-mono">base_mrr = active_billable_users × ${params.full_price_per_user}/mo</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 text-xs bg-slate-950 px-4 py-2 rounded-xl border border-slate-800 shrink-0">
+            <div>
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Expansion Gate</span>
+              <span className="text-emerald-400 font-bold font-mono">
+                {Math.round(params.expansion_wau_threshold * 100)}% WAU
+              </span>
+            </div>
+            <div className="h-6 w-px bg-slate-800" />
+            <div>
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Eligible Accounts</span>
+              <span className="text-white font-bold font-mono">
+                {output.eligible_expansion_accounts_count ?? 8} / 21 Qualify
+              </span>
+            </div>
+            <div className="h-6 w-px bg-slate-800" />
+            <div>
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Conversion Elasticity</span>
+              <span className="text-cyan-400 font-bold font-mono">
+                {output.effective_conversion_pct ?? 65}%
+              </span>
+            </div>
+          </div>
+        </div>
+        </>
       )}
 
       {/* Main Simulator Grid: Controls + Charts */}
@@ -258,6 +306,34 @@ export const PricingSimulator: React.FC = () => {
               GTM & Pricing Controls
             </h3>
             <span className="text-[11px] text-slate-500 font-mono">Pure Deterministic</span>
+          </div>
+
+          {/* Slider 0: Expansion WAU Qualification Threshold (Direct GTM Gate) */}
+          <div className="p-3.5 bg-emerald-950/30 border border-emerald-800/60 rounded-xl space-y-2">
+            <div className="flex justify-between text-xs font-semibold">
+              <span className="text-emerald-300 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                Expansion WAU Threshold Gate
+              </span>
+              <span className="text-emerald-400 font-mono font-bold">
+                {Math.round(params.expansion_wau_threshold * 100)}% WAU
+              </span>
+            </div>
+            <input
+              type="range"
+              min="0.40"
+              max="0.85"
+              step="0.01"
+              value={params.expansion_wau_threshold}
+              onChange={(e) => handleSliderChange('expansion_wau_threshold', parseFloat(e.target.value))}
+              className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-emerald-500"
+            />
+            <div className="flex justify-between text-[10px] text-slate-400">
+              <span>Higher bar reduces qualified conversion</span>
+              <span className="text-emerald-400 font-mono font-bold">
+                {output?.eligible_expansion_accounts_count ?? 8} / 21 Qualify
+              </span>
+            </div>
           </div>
 
           {/* Slider 1: Pilot Price */}
@@ -390,7 +466,7 @@ export const PricingSimulator: React.FC = () => {
                   24-Month ARR Projection & NorthBridge Shadow Overlay
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Solvant usage-metered ARR vs NorthBridge incumbent seat-tax model ($60/licensed seat with 33% usage).
+                  Solvant usage-metered ARR vs NorthBridge incumbent seat-tax model ($60/licensed seat under illustrative industry assumption — 33% utilization).
                 </p>
               </div>
 

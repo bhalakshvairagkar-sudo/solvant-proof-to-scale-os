@@ -119,15 +119,16 @@ def evaluate_expansion_criteria(
     retained_30d_users: int,
     activated_users: int,
     health_score: float,
+    expansion_wau_threshold: float = 0.60,
 ) -> ExpansionCriteriaStatus:
     """
     Expansion trigger criteria (all customer-verifiable, never Solvant self-reported):
-    1. WAU >= 60% for 4 consecutive weeks
+    1. WAU >= expansion_wau_threshold for 4 consecutive weeks
     2. Workflow time reduction >= 20%
     3. 30-day retention >= 70%
     """
     last_4_wau = weekly_wau_history[-4:] if len(weekly_wau_history) >= 4 else weekly_wau_history
-    consecutive_wau_met = len(last_4_wau) >= 4 and all(w >= 0.60 for w in last_4_wau)
+    consecutive_wau_met = len(last_4_wau) >= 4 and all(w >= expansion_wau_threshold for w in last_4_wau)
 
     time_reduction_met = workflow_time_reduction_pct >= 0.20
 
@@ -146,6 +147,7 @@ def evaluate_expansion_criteria(
     return ExpansionCriteriaStatus(
         consecutive_wau_met=consecutive_wau_met,
         consecutive_wau_values=[round(w, 3) for w in last_4_wau],
+        expansion_wau_threshold_applied=round(expansion_wau_threshold, 3),
         time_reduction_met=time_reduction_met,
         time_reduction_value=round(workflow_time_reduction_pct, 3),
         retention_met=retention_met,
@@ -155,7 +157,7 @@ def evaluate_expansion_criteria(
     )
 
 
-def evaluate_account_health(account: Account) -> AccountHealthResponse:
+def evaluate_account_health(account: Account, expansion_wau_threshold: float = 0.60) -> AccountHealthResponse:
     health = compute_health_score(
         invited_users=account.invited_users,
         activated_users=account.activated_users,
@@ -171,6 +173,7 @@ def evaluate_account_health(account: Account) -> AccountHealthResponse:
         retained_30d_users=account.retained_30d_users,
         activated_users=account.activated_users,
         health_score=health.final_score,
+        expansion_wau_threshold=expansion_wau_threshold,
     )
 
     # Rule: if score < 45 by day 45 -> auto-trigger intervention workstream

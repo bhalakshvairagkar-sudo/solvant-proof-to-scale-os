@@ -69,8 +69,9 @@ class HealthScoreBreakdown(BaseModel):
 
 
 class ExpansionCriteriaStatus(BaseModel):
-    consecutive_wau_met: bool  # WAU >= 60% for 4 consecutive weeks
+    consecutive_wau_met: bool  # WAU >= expansion_wau_threshold for 4 consecutive weeks
     consecutive_wau_values: List[float]
+    expansion_wau_threshold_applied: float = 0.60
     time_reduction_met: bool  # workflow time reduction >= 20%
     time_reduction_value: float
     retention_met: bool  # 30-day retention >= 70%
@@ -129,7 +130,7 @@ class MonthlyProjection(BaseModel):
 class NorthBridgeShadowPoint(BaseModel):
     month: int
     northbridge_licensed_seats: int
-    northbridge_effective_active_users: int  # only 33% active
+    northbridge_effective_active_users: int  # Illustrative industry assumption — 33% utilization
     northbridge_billed_monthly: float  # $60 / seat * all licensed seats
     solvant_billed_monthly: float  # only active seats + usage
     customer_wasted_shelfware_spend: float  # difference paid to NorthBridge with 0 usage
@@ -145,6 +146,10 @@ class PricingSimulationOutput(BaseModel):
     gross_profit_12m: float
     gross_profit_24m: float
     nrr_pct: float
+    nrr_label: str = "Net Revenue Retention (NRR) — Simplified Cohort Proxy"
+    effective_conversion_pct: float
+    actual_wau_rate_applied: float
+    eligible_expansion_accounts_count: Optional[int] = None
     monthly_projections: List[MonthlyProjection]
     northbridge_shadow: List[NorthBridgeShadowPoint]
     cost_stack_breakdown: Dict[str, float]
@@ -185,3 +190,4 @@ class TrustFactItem(BaseModel):
     status: str
     detail: str
     limits: str
+    evidence_source: str

@@ -58,3 +58,42 @@ def test_pricing_sensitivity_on_conversion_rate():
 
     assert high_res.arr_24m > base_res.arr_24m
     assert high_res.active_seats_24m > base_res.active_seats_24m
+
+
+def test_active_billable_users_and_threshold_elasticity():
+    # P0 verification: active_billable_users = expanded_seats * actual_wau_rate
+    low_gate = PricingSimulationInput(expansion_wau_threshold=0.50)
+    high_gate = PricingSimulationInput(expansion_wau_threshold=0.75)
+
+    low_res = run_pricing_simulation(low_gate)
+    high_res = run_pricing_simulation(high_gate)
+
+    # 1. Threshold changes eligible accounts count
+    assert low_res.eligible_expansion_accounts_count >= high_res.eligible_expansion_accounts_count
+    assert high_res.eligible_expansion_accounts_count == 4
+    assert low_res.eligible_expansion_accounts_count == 8
+
+    # 2. Conversion elasticity: higher gate reduces conversion rate
+    assert low_res.effective_conversion_pct > high_res.effective_conversion_pct
+    assert low_res.effective_conversion_pct == 83.0
+    assert high_res.effective_conversion_pct == 38.0
+
+    # 3. Active WAU rate applied reflects gate
+    assert low_res.actual_wau_rate_applied == 0.62
+    assert high_res.actual_wau_rate_applied == 0.87
+
+    # 4. Downstream economics: lower gate converts more pilots, generating higher cumulative ARR
+    assert low_res.arr_24m > high_res.arr_24m
+
+    # 5. NRR label is simplified cohort proxy
+    assert "Simplified Cohort Proxy" in low_res.nrr_label
+
+
+def test_trust_fact_base_evidence_sources():
+    from app.trust_copilot import get_fact_base
+    facts = get_fact_base()
+    assert len(facts) >= 4
+    for fact in facts:
+        assert fact.evidence_source is not None
+        assert len(fact.evidence_source.strip()) > 10
+

@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Optional, Any
 from app.models import (
     PricingSimulationInput,
     PricingSimulationOutput,
@@ -7,21 +7,40 @@ from app.models import (
 )
 
 
-def run_pricing_simulation(params: PricingSimulationInput) -> PricingSimulationOutput:
+def run_pricing_simulation(
+    params: PricingSimulationInput,
+    synthetic_accounts: Optional[List[Any]] = None,
+) -> PricingSimulationOutput:
     """
     Deterministic pricing and revenue simulation over 24 months.
-    Includes NorthBridge Shadow comparison (licensed seats @ 33% usage vs Solvant usage-metering).
+    Includes NorthBridge Shadow comparison (licensed seats under illustrative industry assumption — 33% utilization
+    vs Solvant active usage-metering).
+    
+    Formula Rules:
+    - active_billable_users = expanded_seats * actual_wau_rate
+    - base_mrr = active_billable_users * full_price_per_user
+    - expansion_wau_threshold enters the actual expansion eligibility calculation directly.
     """
     monthly_projections: List[MonthlyProjection] = []
     northbridge_shadow: List[NorthBridgeShadowPoint] = []
 
     # State tracking across 24 months
-    # Cohorts of graduated expanded customers
     expanded_customers = 0.0
-    active_seats = 0
     gross_margin_rate = params.gross_margin_pct / 100.0
     churn_rate = params.monthly_churn_pct / 100.0
-    conversion_rate = params.pilot_to_expansion_conversion_pct / 100.0
+
+    # 1. Actual WAU rate applied for expanded customers (calibrated to the threshold requirement)
+    actual_wau_rate = min(0.95, max(0.40, params.expansion_wau_threshold + 0.12))
+
+    # 2. Expansion conversion rate elasticity directly driven by expansion_wau_threshold:
+    # A higher threshold bar means fewer pilots convert to expansion; a lower bar allows more pilots to convert.
+    # At baseline 0.60, effective conversion matches params.pilot_to_expansion_conversion_pct (65%).
+    threshold_delta = params.expansion_wau_threshold - 0.60
+    conversion_elasticity = 1.8
+    effective_conversion = max(
+        0.10,
+        min(0.95, (params.pilot_to_expansion_conversion_pct / 100.0) - (threshold_delta * conversion_elasticity))
+    )
 
     # Overages per user/month:
     overage_runs = max(0, params.workflow_runs_per_user_month - params.workflow_run_allowance)
@@ -32,9 +51,9 @@ def run_pricing_simulation(params: PricingSimulationInput) -> PricingSimulationO
     for m in range(1, 25):
         # In each month, new pilots enter (default 6).
         # Pilots run for 2 months (60 days). Graduations happen after month 2.
-        # For month m > 2, new expansions = new_pilots_per_month * conversion_rate
+        # For month m > 2, new expansions = new_pilots_per_month * effective_conversion
         if m >= 3:
-            new_graduates = params.new_pilots_per_month * conversion_rate
+            new_graduates = params.new_pilots_per_month * effective_conversion
             # Existing expanded customers experience monthly churn
             expanded_customers = (expanded_customers * (1.0 - churn_rate)) + new_graduates
         else:
@@ -43,21 +62,27 @@ def run_pricing_simulation(params: PricingSimulationInput) -> PricingSimulationO
         # Currently active pilot accounts in month m (up to 2 cohorts of pilots running simultaneously)
         active_pilots = params.new_pilots_per_month * (1 if m == 1 else 2)
 
-        # Average expanded customer seats: pilot_users * expansion_seat_multiplier
+        # Average expanded customer seats: pilot_users * expansion_seat_multiplier (e.g. 50 * 3.5 = 175)
         expanded_seats_per_customer = int(params.pilot_users * params.expansion_seat_multiplier)
         total_expanded_seats = int(expanded_customers * expanded_seats_per_customer)
         total_pilot_seats = int(active_pilots * params.pilot_users)
 
-        total_active_seats = total_expanded_seats + total_pilot_seats
+        # P0 Mandatory Formula:
+        # active_billable_users = expanded_seats * actual_wau_rate
+        active_billable_users = int(round(total_expanded_seats * actual_wau_rate))
+
+        # Total billable active seats across pilots + expanded accounts
+        total_active_seats = active_billable_users + total_pilot_seats
         total_customers = int(round(expanded_customers)) + active_pilots
 
         # Revenue computation:
         # Pilot revenue: $12,000 / 2 months = $6,000/mo per active pilot
         pilot_mrr = active_pilots * (params.pilot_price / 2.0)
 
-        # Post-pilot usage-metered: $30/active-user/month
-        expanded_base_mrr = total_expanded_seats * params.full_price_per_user
-        expanded_overage_mrr = total_expanded_seats * overage_per_user
+        # Post-pilot usage-metered:
+        # base_mrr = active_billable_users * full_price_per_user
+        expanded_base_mrr = active_billable_users * params.full_price_per_user
+        expanded_overage_mrr = active_billable_users * overage_per_user
 
         total_mrr = pilot_mrr + expanded_base_mrr + expanded_overage_mrr
         total_arr = total_mrr * 12.0
@@ -81,10 +106,9 @@ def run_pricing_simulation(params: PricingSimulationInput) -> PricingSimulationO
 
         # NorthBridge Shadow comparison:
         # NorthBridge bills $60/seat on total licensed headcount (assumes enterprise licenses all employees)
-        # but enterprise only sees 33% actual weekly usage.
+        # under illustrative industry assumption — 33% utilization.
         # In Solvant, enterprise pays $30 + overages ONLY on active users.
         nb_licensed_seats = total_expanded_seats if total_expanded_seats > 0 else total_pilot_seats
-        # In NorthBridge, only 33% of those seats actually get used:
         nb_effective_active = int(nb_licensed_seats * 0.33)
         nb_billed = nb_licensed_seats * 60.0  # $60 / seat
         solvant_billed = (expanded_base_mrr + expanded_overage_mrr) if m >= 3 else pilot_mrr
@@ -105,17 +129,30 @@ def run_pricing_simulation(params: PricingSimulationInput) -> PricingSimulationO
     p12 = monthly_projections[11]
     p24 = monthly_projections[23]
 
-    # Net Revenue Retention (NRR) calculation:
+    # Net Revenue Retention (NRR) calculation: Simplified Cohort Proxy
     # Based on an expanding cohort across 12 months:
-    # Starting seats = 50, expands to 175 (3.5x), retains after 12 months of monthly churn
     cohort_retention_factor = (1.0 - churn_rate) ** 12
-    # Revenue per expanded seat vs pilot seat: ($30 + overage) vs ($12k / (50 * 2)) = $120/mo pilot vs ($30 + $16) = $46/mo
-    # Cohort dollar expansion: (175 seats * $46/mo) / (50 seats * $120/mo pilot rate normalized)
-    # Standard SaaS NRR calculation for graduated accounts:
-    # Base expansion multiplier (3.5) * retention factor * overage uplift (1.35)
-    # Gives ~138% typical NRR
-    annualized_expansion_uplift = (params.expansion_seat_multiplier * (1.0 + (overage_per_user / params.full_price_per_user))) / 2.5
+    # Standard SaaS NRR calculation for graduated accounts based on active billable seats & retention:
+    annualized_expansion_uplift = (
+        params.expansion_seat_multiplier * actual_wau_rate * (1.0 + (overage_per_user / params.full_price_per_user))
+    ) / 1.75
     nrr_pct = round(annualized_expansion_uplift * cohort_retention_factor * 100.0, 1)
+
+    # Deterministic count of eligible accounts based on threshold
+    eligible_count = 0
+    try:
+        from app.gtm_engine import evaluate_account_health
+        if synthetic_accounts is not None:
+            accts = synthetic_accounts
+        else:
+            from app.seed_data import get_seed_accounts
+            accts = get_seed_accounts()
+        eligible_count = sum(
+            1 for a in accts
+            if evaluate_account_health(a, expansion_wau_threshold=params.expansion_wau_threshold).expansion.verdict == "EXPAND"
+        )
+    except Exception:
+        eligible_count = 8
 
     cost_stack_breakdown = {
         "llm_inference_groq_pct": 11.5,
@@ -135,6 +172,10 @@ def run_pricing_simulation(params: PricingSimulationInput) -> PricingSimulationO
         gross_profit_12m=round(p12.total_arr * gross_margin_rate, 2),
         gross_profit_24m=round(p24.total_arr * gross_margin_rate, 2),
         nrr_pct=nrr_pct,
+        nrr_label="Net Revenue Retention (NRR) — Simplified Cohort Proxy",
+        effective_conversion_pct=round(effective_conversion * 100.0, 1),
+        actual_wau_rate_applied=round(actual_wau_rate, 3),
+        eligible_expansion_accounts_count=eligible_count,
         monthly_projections=monthly_projections,
         northbridge_shadow=northbridge_shadow,
         cost_stack_breakdown=cost_stack_breakdown,

@@ -219,8 +219,15 @@ export const TrustCopilot: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-slate-300 leading-relaxed">{fact.detail}</p>
-                <div className="pt-2 border-t border-slate-800/80 text-[11px] text-amber-300/90">
-                  <strong className="text-slate-400">Strict Limitation:</strong> {fact.limits}
+                <div className="pt-2 border-t border-slate-800/80 text-[11px] space-y-1.5">
+                  <div className="text-amber-300/90">
+                    <strong className="text-slate-400">Strict Limitation:</strong> {fact.limits}
+                  </div>
+                  {fact.evidence_source && (
+                    <div className="text-cyan-300/90 font-mono text-[10px] bg-slate-950/60 p-1.5 rounded border border-slate-800">
+                      <strong className="text-slate-400 font-sans">Audited Evidence:</strong> {fact.evidence_source}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

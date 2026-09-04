@@ -62,7 +62,7 @@ COMPETITOR_PRICING_TEARDOWNS: List[Dict[str, Any]] = [
         "model_type": "Flat Seat-License Tax ($30/user/mo Pre-paid Annually)",
         "pricing_mechanics": "$30/user/month ($360/year/user) billed upfront as an add-on to Microsoft 365 E3/E5 enterprise agreements. Full headcount commitment required.",
         "why_it_succeeds": "Leverages existing enterprise procurement paper and bundled distribution; easy for IT to buy in bulk on existing agreements.",
-        "failure_mode_in_genai": "The 67% Shelfware Penalty: Real enterprise logs show that after 90 days, only 33% of licensed employees log in weekly. For a 1,000-seat company ($360k commit), only 330 people use it: effective cost = $90.90 per active user/month! The company pays $241k/yr for ghost seats.",
+        "failure_mode_in_genai": "The 67% Shelfware Penalty: Under our explicitly labeled illustrative industry assumption — 33% utilization after 90 days, for a 1,000-seat company ($360k commit), only 330 people use it: effective cost = $90.90 per active user/month! The company pays $241k/yr for ghost seats.",
         "solvant_solution": "Customer-Verifiable Metering: Solvant bills only the 330 active users ($30 * 330 = $9,900/mo vs Microsoft $30,000/mo). Solvant saves the customer $241,200/year while tying expansion directly to verified hours saved.",
     },
 ]
@@ -97,7 +97,7 @@ ADVERSARIAL_CURVEBALL_REHEARSALS: List[Dict[str, Any]] = [
     {
         "persona": "Skeptical CFO (Defending Bundled Microsoft E5)",
         "initial_objection": "Microsoft gives us Copilot in our E5 bundle. Why should I write a $12k check for Solvant?",
-        "solvant_opening": "Microsoft gives you seats, not active usage. Real enterprise telemetry shows Microsoft Copilot hits only 33% weekly active usage after month 3, meaning you pay $90/active-user on wasted shelfware.",
+        "solvant_opening": "Microsoft gives you seats, not active usage. Under our illustrative industry assumption — 33% utilization after month 3, you end up paying $90/active-user on wasted shelfware.",
         "adversarial_followup": "My Microsoft rep claims Excel Copilot already does variance analysis. Why can't my analysts just use that for free?",
         "adversarial_rebuttal": "Generic Excel Copilot writes cell formulas and generic summaries; it cannot isolate volume vs price variance across multi-entity ERP ledgers with citation stamps and audit approvals. More critically: Microsoft charges you whether your team uses it or not. With Solvant, expansion is legally gated on your own internal logs hitting 60% WAU and 20% time reduction. If your team doesn't verify the value, you get your $12,000 back.",
     },

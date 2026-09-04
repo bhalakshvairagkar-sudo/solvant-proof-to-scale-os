@@ -10,6 +10,7 @@ import {
   Sparkles,
   HelpCircle,
   Key,
+  Database,
 } from 'lucide-react';
 import { PortfolioSummary } from '../types';
 import { setGroqConfig } from '../api';
@@ -91,12 +92,16 @@ export const Header: React.FC<HeaderProps> = ({
               S
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-lg font-bold text-white tracking-tight">
                   SOLVANT PROOF-TO-SCALE OS
                 </h1>
                 <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/60 font-mono font-medium">
                   ENTERPRISE v1.0
+                </span>
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-800/60 font-mono font-semibold flex items-center gap-1.5 shadow-sm">
+                  <Database className="w-3 h-3 text-cyan-400" />
+                  Synthetic Benchmark Data — 21 Calibrated Enterprise Cohorts
                 </span>
               </div>
               <p className="text-xs text-slate-400">

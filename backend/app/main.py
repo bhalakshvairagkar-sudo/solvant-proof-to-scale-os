@@ -53,6 +53,7 @@ class SimulationUpdateRequest(BaseModel):
     simulated_wau_pct: Optional[float] = None
     simulated_time_reduction_pct: Optional[float] = None
     simulated_retention_pct: Optional[float] = None
+    isolate_wau_effect: Optional[bool] = False
 
 
 class GroqKeyRequest(BaseModel):
@@ -92,16 +93,21 @@ def configure_groq_key(req: GroqKeyRequest):
 
 
 @app.get("/api/portfolio")
-def get_portfolio_summary():
+def get_portfolio_summary(expansion_wau_threshold: float = 0.60):
     accounts = db.get_all()
-    evaluated = [evaluate_account_health(acct) for acct in accounts]
+    evaluated = [evaluate_account_health(acct, expansion_wau_threshold=expansion_wau_threshold) for acct in accounts]
 
-    expansion_ready = [e for e in evaluated if e.health.band == "Expansion Ready"]
-    healthy_watch = [e for e in evaluated if e.health.band == "Healthy but Watch"]
+    expansion_ready = [e for e in evaluated if e.expansion.verdict == "EXPAND"]
+    healthy_watch = [
+        e for e in evaluated
+        if e.health.band == "Healthy but Watch" or (e.health.band == "Expansion Ready" and e.expansion.verdict != "EXPAND")
+    ]
     at_risk = [e for e in evaluated if e.health.band == "At Risk"]
 
-    # Calculate pipeline ARR (assuming graduated accounts expand to 175 seats @ $30/mo + $16 overage = ~$96,600 ARR each)
-    pipeline_arr = len(expansion_ready) * (175 * (30 + 16) * 12)
+    # Active billable users calculation:
+    actual_wau_rate = min(0.95, max(0.40, expansion_wau_threshold + 0.12))
+    active_billable_users = int(round(175 * actual_wau_rate))
+    pipeline_arr = len(expansion_ready) * (active_billable_users * (30 + 16) * 12)
     avg_health_score = round(sum(e.health.final_score for e in evaluated) / len(evaluated), 1) if evaluated else 0.0
 
     return {
@@ -112,17 +118,21 @@ def get_portfolio_summary():
         "intervention_alerts_count": sum(1 for e in evaluated if e.intervention_required),
         "pipeline_arr": pipeline_arr,
         "avg_health_score": avg_health_score,
+        "expansion_wau_threshold_applied": expansion_wau_threshold,
+        "active_billable_users_per_account": active_billable_users,
     }
 
 
 @app.get("/api/accounts")
-def list_accounts():
+def list_accounts(expansion_wau_threshold: float = 0.60):
     accounts = db.get_all()
     results = []
+    actual_wau_rate = min(0.95, max(0.40, expansion_wau_threshold + 0.12))
     for acct in accounts:
-        health_resp = evaluate_account_health(acct)
-        # Calculate potential ARR for this account
-        est_arr = int(acct.activated_users * 3.5 * (30 + 16) * 12)
+        health_resp = evaluate_account_health(acct, expansion_wau_threshold=expansion_wau_threshold)
+        expanded_seats = int(acct.activated_users * 3.5)
+        active_billable = int(round(expanded_seats * actual_wau_rate))
+        est_arr = int(active_billable * (30 + 16) * 12)
         results.append({
             "account": acct,
             "health": health_resp.health,
@@ -130,21 +140,25 @@ def list_accounts():
             "intervention_required": health_resp.intervention_required,
             "intervention_reason": health_resp.intervention_reason,
             "estimated_arr": est_arr,
+            "active_billable_users": active_billable,
         })
     # Sort accounts: Expansion Ready first, then Watch, then At Risk
     band_order = {"Expansion Ready": 0, "Healthy but Watch": 1, "At Risk": 2}
-    results.sort(key=lambda x: (band_order.get(x["health"].band, 3), -x["health"].final_score))
+    results.sort(key=lambda x: (0 if x["expansion"].verdict == "EXPAND" else band_order.get(x["health"].band, 3), -x["health"].final_score))
     return results
 
 
 @app.get("/api/accounts/{account_id}")
-def get_account_detail(account_id: str):
+def get_account_detail(account_id: str, expansion_wau_threshold: float = 0.60):
     acct = db.get_by_id(account_id)
     if not acct:
         raise HTTPException(status_code=404, detail="Account not found")
 
-    health_resp = evaluate_account_health(acct)
-    est_arr = int(acct.activated_users * 3.5 * (30 + 16) * 12)
+    health_resp = evaluate_account_health(acct, expansion_wau_threshold=expansion_wau_threshold)
+    actual_wau_rate = min(0.95, max(0.40, expansion_wau_threshold + 0.12))
+    expanded_seats = int(acct.activated_users * 3.5)
+    active_billable = int(round(expanded_seats * actual_wau_rate))
+    est_arr = int(active_billable * (30 + 16) * 12)
 
     return {
         "account": acct,
@@ -154,6 +168,7 @@ def get_account_detail(account_id: str):
         "intervention_reason": health_resp.intervention_reason,
         "pilot_thresholds_met": health_resp.pilot_thresholds_met,
         "estimated_arr": est_arr,
+        "active_billable_users": active_billable,
     }
 
 
@@ -168,12 +183,15 @@ def simulate_account_changes(account_id: str, req: SimulationUpdateRequest):
         simulated_wau_pct=req.simulated_wau_pct,
         simulated_time_reduction_pct=req.simulated_time_reduction_pct,
         simulated_retention_pct=req.simulated_retention_pct,
+        isolate_wau_effect=bool(req.isolate_wau_effect),
     )
     if not updated_acct:
         raise HTTPException(status_code=404, detail="Account not found")
 
     health_resp = evaluate_account_health(updated_acct)
-    est_arr = int(updated_acct.activated_users * 3.5 * (30 + 16) * 12)
+    expanded_seats = int(updated_acct.activated_users * 3.5)
+    active_billable = int(round(expanded_seats * 0.72))
+    est_arr = int(active_billable * (30 + 16) * 12)
 
     return {
         "account": updated_acct,
@@ -183,6 +201,7 @@ def simulate_account_changes(account_id: str, req: SimulationUpdateRequest):
         "intervention_reason": health_resp.intervention_reason,
         "pilot_thresholds_met": health_resp.pilot_thresholds_met,
         "estimated_arr": est_arr,
+        "active_billable_users": active_billable,
     }
 
 
@@ -208,8 +227,9 @@ def simulate_pricing(params: PricingSimulationInput):
     """
     Pure deterministic pricing engine calculation.
     Computes 12m & 24m ARR, seats, gross profit (76.5%), NRR, and NorthBridge Shadow series.
+    Formula: active_billable_users = expanded_seats * actual_wau_rate.
     """
-    return run_pricing_simulation(params)
+    return run_pricing_simulation(params, synthetic_accounts=db.get_all())
 
 
 @app.post("/api/groq/pricing-strategist", response_model=PricingStrategistResponse)

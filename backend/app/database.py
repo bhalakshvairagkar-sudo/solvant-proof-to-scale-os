@@ -25,6 +25,7 @@ class AccountDatabase:
         simulated_wau_pct: Optional[float] = None,
         simulated_time_reduction_pct: Optional[float] = None,
         simulated_retention_pct: Optional[float] = None,
+        isolate_wau_effect: bool = False,
     ) -> Optional[Account]:
         acct = self._accounts.get(account_id)
         if not acct:
@@ -34,19 +35,20 @@ class AccountDatabase:
         updated_data = acct.model_dump()
 
         if simulated_wau_pct is not None:
-            simulated_wau_pct = max(0.05, min(1.0, simulated_wau_pct))
             updated_data["weekly_active_users"] = int(round(simulated_wau_pct * acct.activated_users))
             # update the last 4 weeks of WAU history to reflect the trend
             hist = list(acct.weekly_wau_history)
             hist[-1] = round(simulated_wau_pct, 3)
-            # if dragged down significantly, create downward trend and correlate retention & outcome
+            # if dragged down significantly, create downward trend
             if simulated_wau_pct < 0.60:
                 hist[-2] = round(min(hist[-2], simulated_wau_pct + 0.06), 3)
                 hist[-3] = round(min(hist[-3], simulated_wau_pct + 0.12), 3)
-                if simulated_retention_pct is None:
-                    updated_data["retained_30d_users"] = int(round(max(0.15, simulated_wau_pct * 1.05) * acct.activated_users))
-                if simulated_time_reduction_pct is None:
-                    updated_data["workflow_time_reduction_pct"] = round(min(acct.workflow_time_reduction_pct, max(0.04, simulated_wau_pct * 0.35)), 3)
+                # Only couple retention & outcome if not in isolated mode (Scenario Assumption mode)
+                if not isolate_wau_effect:
+                    if simulated_retention_pct is None:
+                        updated_data["retained_30d_users"] = int(round(max(0.15, simulated_wau_pct * 1.05) * acct.activated_users))
+                    if simulated_time_reduction_pct is None:
+                        updated_data["workflow_time_reduction_pct"] = round(min(acct.workflow_time_reduction_pct, max(0.04, simulated_wau_pct * 0.35)), 3)
             updated_data["weekly_wau_history"] = hist
 
         if simulated_time_reduction_pct is not None:

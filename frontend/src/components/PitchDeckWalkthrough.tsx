@@ -33,11 +33,11 @@ export const PitchDeckWalkthrough: React.FC<{
     },
     {
       step: 'Slide 2 / 8',
-      title: 'Insight: The 33% Active Usage Gap',
+      title: 'Insight: The Active Usage Gap (Illustrative 33% Utilization)',
       subtitle: 'The wedge is adoption infrastructure, not another chatbot',
       points: [
         'Enterprises do not have an AI capability problem; they have an AI Adoption & Verification problem.',
-        'If an enterprise pays $60/seat for 175 employees but only 58 log in (33% WAU), they are wasting $84,000/year on shelfware.',
+        'Under our illustrative industry assumption — 33% utilization, an enterprise paying $60/seat for 175 employees has only ~58 active users, wasting $84,000/year on shelfware.',
         'Solvant flips this entirely: we charge a $12,000 refundable deposit, lock pilot success thresholds before day 1, and bill ONLY for active weekly users verified in customer logs.',
       ],
       actionLabel: 'Next: System Architecture →',

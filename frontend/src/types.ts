@@ -151,6 +151,10 @@ export interface PricingSimulationOutput {
   gross_profit_12m: number;
   gross_profit_24m: number;
   nrr_pct: number;
+  nrr_label?: string;
+  effective_conversion_pct?: number;
+  actual_wau_rate_applied?: number;
+  eligible_expansion_accounts_count?: number;
   monthly_projections: MonthlyProjection[];
   northbridge_shadow: NorthBridgeShadowPoint[];
   cost_stack_breakdown: Record<string, number>;
@@ -191,4 +195,5 @@ export interface TrustFactItem {
   status: string;
   detail: string;
   limits: string;
+  evidence_source: string;
 }

@@ -30,18 +30,27 @@ export async function setGroqConfig(key: string, model?: string): Promise<{ succ
   return res.json();
 }
 
-export async function fetchPortfolioSummary(): Promise<PortfolioSummary> {
-  const res = await fetch(`${API_BASE}/portfolio`);
+export async function fetchPortfolioSummary(expansionWauThreshold?: number): Promise<PortfolioSummary> {
+  const url = expansionWauThreshold !== undefined
+    ? `${API_BASE}/portfolio?expansion_wau_threshold=${expansionWauThreshold}`
+    : `${API_BASE}/portfolio`;
+  const res = await fetch(url);
   return res.json();
 }
 
-export async function fetchAccounts(): Promise<AccountItemResponse[]> {
-  const res = await fetch(`${API_BASE}/accounts`);
+export async function fetchAccounts(expansionWauThreshold?: number): Promise<AccountItemResponse[]> {
+  const url = expansionWauThreshold !== undefined
+    ? `${API_BASE}/accounts?expansion_wau_threshold=${expansionWauThreshold}`
+    : `${API_BASE}/accounts`;
+  const res = await fetch(url);
   return res.json();
 }
 
-export async function fetchAccountDetail(id: string): Promise<AccountItemResponse> {
-  const res = await fetch(`${API_BASE}/accounts/${id}`);
+export async function fetchAccountDetail(id: string, expansionWauThreshold?: number): Promise<AccountItemResponse> {
+  const url = expansionWauThreshold !== undefined
+    ? `${API_BASE}/accounts/${id}?expansion_wau_threshold=${expansionWauThreshold}`
+    : `${API_BASE}/accounts/${id}`;
+  const res = await fetch(url);
   return res.json();
 }
 
@@ -49,7 +58,8 @@ export async function simulateAccount(
   id: string,
   simulatedWauPct?: number,
   simulatedTimeReductionPct?: number,
-  simulatedRetentionPct?: number
+  simulatedRetentionPct?: number,
+  isolateWauEffect?: boolean
 ): Promise<AccountItemResponse> {
   const res = await fetch(`${API_BASE}/accounts/${id}/simulate`, {
     method: 'POST',
@@ -58,6 +68,7 @@ export async function simulateAccount(
       simulated_wau_pct: simulatedWauPct,
       simulated_time_reduction_pct: simulatedTimeReductionPct,
       simulated_retention_pct: simulatedRetentionPct,
+      isolate_wau_effect: isolateWauEffect,
     }),
   });
   return res.json();

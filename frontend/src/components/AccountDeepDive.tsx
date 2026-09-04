@@ -14,6 +14,7 @@ import {
   Layers,
   ShieldCheck,
   Info,
+  Database,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -43,6 +44,7 @@ export const AccountDeepDive: React.FC<AccountDeepDiveProps> = ({
 }) => {
   const [currentData, setCurrentData] = useState<AccountItemResponse | null>(null);
   const [wauSlider, setWauSlider] = useState<number>(0.85);
+  const [isolateWau, setIsolateWau] = useState<boolean>(false);
   const [isSimulating, setIsSimulating] = useState(false);
   const [doctorLoading, setDoctorLoading] = useState(false);
   const [doctorResponse, setDoctorResponse] = useState<AdoptionDoctorResponse | null>(null);
@@ -70,11 +72,12 @@ export const AccountDeepDive: React.FC<AccountDeepDiveProps> = ({
     }
   };
 
-  const handleSliderChange = async (newWau: number) => {
+  const handleSliderChange = async (newWau: number, isolateOverride?: boolean) => {
     setWauSlider(newWau);
     setIsSimulating(true);
+    const activeIsolate = isolateOverride !== undefined ? isolateOverride : isolateWau;
     try {
-      const updated = await simulateAccount(selectedAccountId, newWau);
+      const updated = await simulateAccount(selectedAccountId, newWau, undefined, undefined, activeIsolate);
       setCurrentData(updated);
       // Re-trigger doctor diagnosis based on updated facts
       const res = await fetchAdoptionDoctor(selectedAccountId);
@@ -139,6 +142,10 @@ export const AccountDeepDive: React.FC<AccountDeepDiveProps> = ({
                   }`}
                 >
                   {health.band}
+                </span>
+                <span className="text-[11px] px-2.5 py-1 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-800/60 font-mono font-semibold flex items-center gap-1.5 shadow-sm">
+                  <Database className="w-3 h-3 text-cyan-400" />
+                  Synthetic Pilot Telemetry & Audit Trail
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-1">
@@ -222,8 +229,57 @@ export const AccountDeepDive: React.FC<AccountDeepDiveProps> = ({
           </div>
         </div>
 
-        <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-4">
-          <div className="flex items-center justify-between text-xs font-bold mb-2">
+        <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-4 space-y-3">
+          {/* Mode Selector Toggle & Assumption Label */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-800/80">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-300">WAU Sensitivity Mode:</span>
+              <div className="inline-flex rounded-lg bg-slate-900 p-0.5 border border-slate-800 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsolateWau(false);
+                    handleSliderChange(wauSlider, false);
+                  }}
+                  className={`px-2.5 py-1 rounded-md transition font-medium ${
+                    !isolateWau
+                      ? 'bg-emerald-600 text-white shadow'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Coupled Scenario Mode
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsolateWau(true);
+                    handleSliderChange(wauSlider, true);
+                  }}
+                  className={`px-2.5 py-1 rounded-md transition font-medium ${
+                    isolateWau
+                      ? 'bg-indigo-600 text-white shadow'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Isolated WAU Mode
+                </button>
+              </div>
+            </div>
+
+            <div className="text-[11px] font-mono">
+              {!isolateWau ? (
+                <span className="text-amber-300/90 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-900/40">
+                  Scenario Assumption: Severe usage drop erodes 30d retention & realized time savings
+                </span>
+              ) : (
+                <span className="text-indigo-300/90 bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-900/40">
+                  Isolated Mode: Retention & time savings held constant, isolating pure frequency & trend effect
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-xs font-bold">
             <span className="text-slate-300">
               Simulated Weekly Active Rate (WAU):{' '}
               <span className="text-emerald-400 font-mono text-base font-black">

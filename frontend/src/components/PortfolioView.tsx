@@ -10,6 +10,7 @@ import {
   ChevronRight,
   ShieldAlert,
   SlidersHorizontal,
+  Database,
 } from 'lucide-react';
 import { AccountItemResponse, PortfolioSummary } from '../types';
 
@@ -29,37 +30,43 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
 
   const filteredAccounts = useMemo(() => {
     return accounts.filter((item) => {
-      const matchesSearch =
+      const matchSearch =
         item.account.name.toLowerCase().includes(search.toLowerCase()) ||
         item.account.industry.toLowerCase().includes(search.toLowerCase()) ||
         item.account.champion_name.toLowerCase().includes(search.toLowerCase());
 
-      if (!matchesSearch) return false;
+      if (!matchSearch) return false;
 
-      if (filter === 'EXPANSION') return item.health.band === 'Expansion Ready';
-      if (filter === 'WATCH') return item.health.band === 'Healthy but Watch';
+      if (filter === 'EXPANSION') return item.expansion.verdict === 'EXPAND';
+      if (filter === 'WATCH')
+        return item.health.band === 'Healthy but Watch' || (item.health.band === 'Expansion Ready' && item.expansion.verdict !== 'EXPAND');
       if (filter === 'RISK') return item.health.band === 'At Risk' || item.intervention_required;
-
       return true;
     });
   }, [accounts, filter, search]);
 
   return (
     <div className="space-y-6">
-      {/* Top Banner & Context */}
+      {/* Portfolio Top Banner */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-800/80 text-emerald-300 text-xs font-semibold mb-2">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              Pilot Stage: 60-Day Fixed Contract ($12,000 Deposit)
+            <div className="flex items-center gap-2 flex-wrap mb-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-800/80 text-emerald-300 text-xs font-semibold">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                Pilot Stage: 60-Day Fixed Contract ($12,000 Deposit)
+              </div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-800/80 text-cyan-300 text-xs font-semibold">
+                <Database className="w-3.5 h-3.5 text-cyan-400" />
+                Synthetic Benchmark Data — 21 Calibrated Enterprise Cohorts
+              </div>
             </div>
             <h2 className="text-2xl font-bold text-white tracking-tight">
               Enterprise Portfolio Overview
             </h2>
             <p className="text-sm text-slate-400 max-w-2xl mt-1">
-              Deterministic health tracking across all enterprise pilot accounts. Expansion is never self-reported by Solvant — it unlocks only when customer logs verify 60% WAU, 20% time reduction, and 70% 30d retention.
+              Deterministic health tracking across all enterprise pilot accounts. Expansion is never self-reported by Solvant — it unlocks only when customer logs verify WAU threshold, 20% time reduction, and 70% 30d retention.
             </p>
           </div>
 

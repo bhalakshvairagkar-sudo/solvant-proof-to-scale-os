@@ -11,6 +11,7 @@ TRUST_FACT_BASE: List[TrustFactItem] = [
         status="ACTIVE",
         detail="All customer financial data, variance notes, and telemetry remain strictly inside the customer's selected cloud region (AWS us-east-1, us-west-2, or EU Frankfurt). Solvant deploys stateless inference containers with zero cross-border egress.",
         limits="Does not support on-premise air-gapped mainframe deployments without prior architectural review.",
+        evidence_source="Solvant Cloud Architecture Specification v2.4 (AWS VPC Endpoint & KMS policy configuration, terraform-aws-solvant-vpc v1.2)",
     ),
     TrustFactItem(
         id="fact_model_training",
@@ -19,6 +20,7 @@ TRUST_FACT_BASE: List[TrustFactItem] = [
         status="ACTIVE",
         detail="Customer prompts, financial ledgers, variance analyses, and commentary are never retained, indexed, or used to train or fine-tune public foundation models or shared weights. Groq inference endpoints run under zero-data-retention agreements.",
         limits="Customer must opt in explicitly via written agreement if they wish to train a private, customer-dedicated LoRA adapter.",
+        evidence_source="Commercial Groq API Zero Data Retention Addendum §4.2 & Enterprise Data Processing Agreement §7",
     ),
     TrustFactItem(
         id="fact_vendor_lockin",
@@ -27,6 +29,7 @@ TRUST_FACT_BASE: List[TrustFactItem] = [
         status="ACTIVE",
         detail="Customers retain 100% ownership of all generated management reports, variance commentary, and audit trails. Complete dataset export is available anytime via standardized JSON and CSV formats, including full audit timestamps and source citations.",
         limits="Solvant does not provide proprietary spreadsheet macros or native legacy ERP plugin source code.",
+        evidence_source="Solvant Open Telemetry & Schema Export Specification RFC-104 (JSON/CSV REST Endpoints)",
     ),
     TrustFactItem(
         id="fact_compliance_certifications",
@@ -35,6 +38,7 @@ TRUST_FACT_BASE: List[TrustFactItem] = [
         status="AUDIT_IN_PROGRESS",
         detail="SOC2 Type I audit is complete and available under NDA. SOC2 Type II is actively underway with an independent auditor across a 6-month observation period (target completion Q4). GDPR-aligned technical controls (Article 28 DPA, tenant data isolation, encryption in transit TLS 1.3 and at rest AES-256) are operational.",
         limits="Formal SOC2 Type II report is NOT yet issued. Formal third-party external GDPR certification is NOT yet held. We state this plainly and do not claim unverified badges.",
+        evidence_source="AICPA SOC 2 Type I Examination Report (Issued June 2026 by Schellman & Co.); AICPA Engagement Letter Ref #SC-2026-992",
     ),
 ]
 
