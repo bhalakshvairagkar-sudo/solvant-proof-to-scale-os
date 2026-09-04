@@ -66,6 +66,7 @@ class HealthScoreBreakdown(BaseModel):
     color: str  # "emerald", "amber", "rose"
     trend_slope: float
     trend_direction: str  # "positive", "flat", "negative"
+    components: Dict[str, float] = {}
 
 
 class ExpansionCriteriaStatus(BaseModel):
@@ -78,6 +79,10 @@ class ExpansionCriteriaStatus(BaseModel):
     retention_value: float
     all_met: bool
     verdict: str  # "EXPAND", "HOLD", "INTERVENE"
+    failed_conditions: List[str] = []
+    passed_conditions: List[str] = []
+    trigger_status: Dict[str, bool] = {}
+    decision_reason: str = ""
 
 
 class AccountHealthResponse(BaseModel):
@@ -100,6 +105,19 @@ class AdoptionDoctorResponse(BaseModel):
     model_used: str = "verified-baseline-cache"
 
 
+class PerAccountPricingBreakdown(BaseModel):
+    licensed_users: int = 175
+    activated_users: int = 160
+    weekly_active_users: int = 126
+    weekly_active_rate: float = 0.72
+    billable_active_users: int = 126
+    unbilled_inactive_users: int = 49
+    base_mrr: float = 3780.0
+    usage_overage_mrr: float = 2016.0
+    total_mrr: float = 5796.0
+    shelfware_savings_statement: str = "You don't pay us for the 49 users who aren't actively using the workflow."
+
+
 class PricingSimulationInput(BaseModel):
     pilot_price: float = 12000.0
     pilot_users: int = 50
@@ -113,16 +131,25 @@ class PricingSimulationInput(BaseModel):
     workflow_runs_per_user_month: int = 140
     workflow_run_allowance: int = 100
     expansion_seat_multiplier: float = 3.5  # average expansion lands ~175 seats from 50 pilot seats
+    time_to_full_price_days: int = 60  # [30, 60, 90] days
+    pilot_duration_days: int = 60
+    ai_cost_per_run: float = 0.008  # Illustrative AI infrastructure cost assumption: Groq LLaMA 3.3 70B inference
 
 
 class MonthlyProjection(BaseModel):
     month: int
     active_customers: int
     active_seats: int
+    billable_active_users: int = 0
+    licensed_seats: int = 0
+    pilot_revenue: float = 0.0
+    expansion_base_revenue: float = 0.0
+    usage_overage_revenue: float = 0.0
     base_mrr: float
     overage_mrr: float
     total_mrr: float
     total_arr: float
+    dynamic_ai_cost: float = 0.0
     gross_profit_mrr: float
     cumulative_gross_profit: float
 
@@ -146,13 +173,24 @@ class PricingSimulationOutput(BaseModel):
     gross_profit_12m: float
     gross_profit_24m: float
     nrr_pct: float
-    nrr_label: str = "Net Revenue Retention (NRR) — Simplified Cohort Proxy"
+    nrr_label: str = "Projected NRR Proxy"
+    nrr_explanation: str = "Simplified hackathon projection based on expansion, contraction and churn assumptions. Not an audited SaaS NRR calculation."
+    cohort_nrr_proxy_pct: float = 138.0
     effective_conversion_pct: float
     actual_wau_rate_applied: float
     eligible_expansion_accounts_count: Optional[int] = None
+    pilot_days: int = 60
+    full_price_start_month: int = 3
+    months_at_full_price_12m: int = 10
+    months_at_full_price_24m: int = 22
+    total_ai_infrastructure_cost_12m: float = 0.0
+    total_ai_infrastructure_cost_24m: float = 0.0
+    per_account_sample: PerAccountPricingBreakdown = Field(default_factory=PerAccountPricingBreakdown)
     monthly_projections: List[MonthlyProjection]
     northbridge_shadow: List[NorthBridgeShadowPoint]
     cost_stack_breakdown: Dict[str, float]
+    model_assumptions: Dict[str, Any] = Field(default_factory=dict)
+    known_simplifications: List[str] = Field(default_factory=list)
     params: PricingSimulationInput
 
 
@@ -170,6 +208,12 @@ class OverclaimGuard(BaseModel):
     facts_grounded_count: int
     verified_claims: List[str]
     unsupported_or_limited_claims: List[str]
+    validation_mechanism: str = "Claim Guard: deterministic fact-reference validation"
+
+
+class TrustClaimRef(BaseModel):
+    text: str
+    fact_ids: List[str]
 
 
 class TrustCopilotResponse(BaseModel):
@@ -178,16 +222,47 @@ class TrustCopilotResponse(BaseModel):
     step3_evidence: str
     step4_claim_limits: str
     step5_risk_reduction: str
+    claims: List[TrustClaimRef] = []
     overclaim_guard: OverclaimGuard
+    audit_event_id: Optional[str] = None
+    audit_event_hash: Optional[str] = None
     is_live_llm: bool = False
     model_used: str = "verified-baseline-cache"
 
 
 class TrustFactItem(BaseModel):
     id: str
+    topic: str
+    claim: str
+    allowed: bool = True
     category: str
     title: str
-    status: str
+    status: str = "ACTIVE"
     detail: str
     limits: str
     evidence_source: str
+
+
+class AdoptionObjective(BaseModel):
+    objective: str
+    target: str
+    current_value: str
+    met: bool
+
+
+class AdoptionPhaseMilestone(BaseModel):
+    phase: str
+    day_range: str
+    status: str  # "COMPLETED", "IN_PROGRESS", "UPCOMING"
+    objectives: List[AdoptionObjective]
+    exit_gate: str
+    exit_gate_met: bool
+
+
+class AdoptionWorkstream(BaseModel):
+    account_id: str
+    account_name: str
+    pilot_days_elapsed: int
+    current_phase: str
+    phases: List[AdoptionPhaseMilestone]
+

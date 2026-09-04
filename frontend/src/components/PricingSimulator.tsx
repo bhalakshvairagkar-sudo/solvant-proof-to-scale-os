@@ -12,6 +12,10 @@ import {
   Layers,
   ArrowRight,
   CheckCircle2,
+  Clock,
+  ChevronDown,
+  ChevronUp,
+  Cpu,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -47,7 +51,10 @@ export const PricingSimulator: React.FC = () => {
     workflow_runs_per_user_month: 140,
     workflow_run_allowance: 100,
     expansion_seat_multiplier: 3.5,
+    time_to_full_price_days: 60,
   });
+  const [showAssumptions, setShowAssumptions] = useState(false);
+  const [showSimplifications, setShowSimplifications] = useState(false);
 
   const [output, setOutput] = useState<PricingSimulationOutput | null>(null);
   const [showNorthBridgeShadow, setShowNorthBridgeShadow] = useState(true);
@@ -281,7 +288,7 @@ export const PricingSimulator: React.FC = () => {
             <div>
               <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Eligible Accounts</span>
               <span className="text-white font-bold font-mono">
-                {output.eligible_expansion_accounts_count ?? 8} / 21 Qualify
+                {output.eligible_expansion_accounts_count ?? 8} / 24 Qualify
               </span>
             </div>
             <div className="h-6 w-px bg-slate-800" />
@@ -308,7 +315,7 @@ export const PricingSimulator: React.FC = () => {
             <span className="text-[11px] text-slate-500 font-mono">Pure Deterministic</span>
           </div>
 
-          {/* Slider 0: Expansion WAU Qualification Threshold (Direct GTM Gate) */}
+                    {/* Slider 0: Expansion WAU Qualification Threshold (Direct GTM Gate) */}
           <div className="p-3.5 bg-emerald-950/30 border border-emerald-800/60 rounded-xl space-y-2">
             <div className="flex justify-between text-xs font-semibold">
               <span className="text-emerald-300 flex items-center gap-1.5">
@@ -331,9 +338,44 @@ export const PricingSimulator: React.FC = () => {
             <div className="flex justify-between text-[10px] text-slate-400">
               <span>Higher bar reduces qualified conversion</span>
               <span className="text-emerald-400 font-mono font-bold">
-                {output?.eligible_expansion_accounts_count ?? 8} / 21 Qualify
+                {output?.eligible_expansion_accounts_count ?? 8} / 24 Qualify
               </span>
             </div>
+          </div>
+
+          {/* Time to Full Price Selector (Material Model Variable) */}
+          <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-xl space-y-2">
+            <div className="flex justify-between text-xs font-semibold">
+              <span className="text-slate-300 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                Time to Full Price
+              </span>
+              <span className="text-cyan-400 font-mono font-bold">
+                {params.time_to_full_price_days ?? 60} Days (Full Price: Month {output?.full_price_start_month ?? 3})
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[30, 60, 90].map((days) => (
+                <button
+                  key={days}
+                  onClick={() => handleSliderChange('time_to_full_price_days' as any, days)}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-medium border transition ${
+                    (params.time_to_full_price_days ?? 60) === days
+                      ? 'bg-cyan-950 border-cyan-700 text-cyan-300 font-bold shadow-sm'
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {days}d (M{days === 30 ? 2 : days === 60 ? 3 : 4})
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-400 leading-tight">
+              {params.time_to_full_price_days === 30
+                ? '30d pilot: expansion begins Month 2 (11 full-price months in Y1)'
+                : params.time_to_full_price_days === 90
+                ? '90d pilot: expansion begins Month 4 (9 full-price months in Y1)'
+                : '60d baseline: expansion begins Month 3 (10 full-price months in Y1)'}
+            </p>
           </div>
 
           {/* Slider 1: Pilot Price */}
@@ -540,6 +582,120 @@ export const PricingSimulator: React.FC = () => {
                   )}
                 </AreaChart>
               </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Per-Account Billing Truth: Provisioned vs. Active vs. Billable Users */}
+          {output?.per_account_sample && (
+            <div className="bg-slate-900 border border-emerald-900/60 rounded-2xl p-6 shadow-xl relative overflow-hidden bg-gradient-to-b from-emerald-950/20 to-slate-900">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950 border border-emerald-800 text-emerald-300 text-[11px] font-semibold mb-1">
+                    <Users className="w-3 h-3 text-emerald-400" />
+                    Per-Account Billing Truth
+                  </div>
+                  <h4 className="text-base font-bold text-white">
+                    Provisioned Seats vs. Active Users vs. Billable Users
+                  </h4>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Representative Account</span>
+                  <span className="text-xs font-mono font-bold text-emerald-300">Acme Corp Expansion</span>
+                </div>
+              </div>
+
+              {/* Metric Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block mb-0.5">1. Provisioned Seats</span>
+                  <div className="text-xl font-black text-white font-mono">{output.per_account_sample.licensed_users}</div>
+                  <span className="text-[10px] text-slate-500">Enterprise total</span>
+                </div>
+                <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block mb-0.5">2. Activated Users</span>
+                  <div className="text-xl font-black text-slate-200 font-mono">{output.per_account_sample.activated_users}</div>
+                  <span className="text-[10px] text-slate-500">Completed onboarding</span>
+                </div>
+                <div className="bg-slate-950/80 p-3 rounded-xl border border-emerald-900/50">
+                  <span className="text-[10px] text-emerald-400 uppercase tracking-wider block mb-0.5">3. Weekly Active (WAU)</span>
+                  <div className="text-xl font-black text-emerald-300 font-mono">{output.per_account_sample.weekly_active_users}</div>
+                  <span className="text-[10px] text-emerald-500 font-mono">{Math.round(output.per_account_sample.weekly_active_rate * 100)}% verified usage</span>
+                </div>
+                <div className="bg-slate-950/80 p-3 rounded-xl border border-emerald-800 bg-emerald-950/20">
+                  <span className="text-[10px] text-emerald-400 uppercase tracking-wider block mb-0.5">4. Billable Active Users</span>
+                  <div className="text-xl font-black text-emerald-400 font-mono">{output.per_account_sample.billable_active_users}</div>
+                  <span className="text-[10px] text-emerald-300 font-mono">You pay ONLY for active</span>
+                </div>
+              </div>
+
+              {/* Financial Comparison Banner */}
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                  <div>
+                    <span className="text-slate-400 block text-[11px]">Solvant Usage-Metered Monthly Spend:</span>
+                    <span className="text-lg font-bold text-white font-mono">
+                      ${output.per_account_sample.total_mrr.toLocaleString()} / mo
+                    </span>
+                    <span className="text-slate-500 ml-2 font-mono text-[11px]">
+                      (${output.per_account_sample.base_mrr} base + ${output.per_account_sample.usage_overage_mrr} overage)
+                    </span>
+                  </div>
+                  <div className="sm:text-right">
+                    <span className="text-slate-400 block text-[11px]">Incumbent Flat License Spend:</span>
+                    <span className="text-lg font-bold text-rose-400 font-mono">
+                      ${(output.per_account_sample.licensed_users * 60).toLocaleString()} / mo
+                    </span>
+                    <span className="text-slate-500 ml-2 font-mono text-[11px]">(175 seats × $60 flat)</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-800 flex items-center justify-between flex-wrap gap-2">
+                  <div className="text-xs text-emerald-300 font-medium flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>{output.per_account_sample.shelfware_savings_statement}</span>
+                  </div>
+                  <span className="text-xs font-bold text-emerald-400 font-mono bg-emerald-950 px-2.5 py-1 rounded border border-emerald-800">
+                    Saved: ${((output.per_account_sample.licensed_users * 60) - output.per_account_sample.total_mrr).toLocaleString()} / mo
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Dynamic AI Infrastructure Cost & Compute Transparency */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-cyan-950 border border-cyan-800 text-cyan-400">
+                  <Cpu className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                    Dynamic AI Infrastructure Cost (COGS)
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 font-mono border border-cyan-800">
+                      Groq LLaMA 3.3 70B
+                    </span>
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    Deterministic execution cost: $0.0080 per workflow run. Scaled against active user executions.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 text-xs font-mono bg-slate-950 px-4 py-2.5 rounded-xl border border-slate-800">
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">12M AI Compute</span>
+                  <span className="text-cyan-300 font-bold font-mono">
+                    ${Math.round(output?.total_ai_infrastructure_cost_12m ?? 39552).toLocaleString()}
+                  </span>
+                </div>
+                <div className="h-6 w-px bg-slate-800" />
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">24M AI Compute</span>
+                  <span className="text-cyan-400 font-bold font-mono">
+                    ${Math.round(output?.total_ai_infrastructure_cost_24m ?? 153950).toLocaleString()}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 

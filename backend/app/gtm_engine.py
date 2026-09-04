@@ -93,6 +93,14 @@ def compute_health_score(
         band = "At Risk"
         color = "rose"
 
+    components = {
+        "activation": round(activation_score * 100.0, 1),
+        "frequency": round(frequency_score * 100.0, 1),
+        "retention": round(retention_score * 100.0, 1),
+        "outcome": round(outcome_score * 100.0, 1),
+        "expansion_trend": round(expansion_score * 100.0, 1),
+    }
+
     return HealthScoreBreakdown(
         activation_score=round(activation_score, 4),
         activation_contribution=round(c_act * 100.0, 2),
@@ -110,6 +118,7 @@ def compute_health_score(
         color=color,
         trend_slope=round(slope, 4),
         trend_direction=direction,
+        components=components,
     )
 
 
@@ -137,12 +146,49 @@ def evaluate_expansion_criteria(
 
     all_met = consecutive_wau_met and time_reduction_met and retention_met
 
+    passed_conditions: List[str] = []
+    failed_conditions: List[str] = []
+
+    thresh_pct = int(round(expansion_wau_threshold * 100))
+    wau_str = ", ".join([f"{int(round(w * 100))}%" for w in last_4_wau])
+    if consecutive_wau_met:
+        passed_conditions.append(f"4-week consecutive WAU ({wau_str}) met or exceeded threshold ({thresh_pct}%)")
+    else:
+        failed_conditions.append(f"4-week consecutive WAU ({wau_str}) fell short of threshold ({thresh_pct}%)")
+
+    time_pct = int(round(workflow_time_reduction_pct * 100))
+    if time_reduction_met:
+        passed_conditions.append(f"Workflow time reduction ({time_pct}%) satisfied >= 20% objective target")
+    else:
+        failed_conditions.append(f"Workflow time reduction ({time_pct}%) below 20% target requirement")
+
+    ret_pct = int(round(retention_rate * 100))
+    if retention_met:
+        passed_conditions.append(f"30-day user retention ({ret_pct}%) satisfied >= 70% persistence target")
+    else:
+        failed_conditions.append(f"30-day user retention ({ret_pct}%) below 70% persistence requirement")
+
+    if health_score >= 70.0:
+        passed_conditions.append(f"Overall adoption health score ({health_score:.1f}/100) satisfied >= 70.0 bar")
+    else:
+        failed_conditions.append(f"Overall adoption health score ({health_score:.1f}/100) below 70.0 bar")
+
+    trigger_status = {
+        "consecutive_wau_met": consecutive_wau_met,
+        "time_reduction_met": time_reduction_met,
+        "retention_met": retention_met,
+        "health_score_met": health_score >= 70.0,
+    }
+
     if all_met and health_score >= 70.0:
         verdict = "EXPAND"
+        decision_reason = "All 4 verifiable adoption hurdles satisfied. Account cleared for customer-approved expansion."
     elif health_score < 40.0:
         verdict = "INTERVENE"
+        decision_reason = f"Critical risk detected: {'; '.join(failed_conditions)}. SLA breach triggers immediate workflow intervention."
     else:
         verdict = "HOLD"
+        decision_reason = f"Expansion on hold pending: {'; '.join(failed_conditions)}."
 
     return ExpansionCriteriaStatus(
         consecutive_wau_met=consecutive_wau_met,
@@ -154,6 +200,10 @@ def evaluate_expansion_criteria(
         retention_value=round(retention_rate, 3),
         all_met=all_met,
         verdict=verdict,
+        failed_conditions=failed_conditions,
+        passed_conditions=passed_conditions,
+        trigger_status=trigger_status,
+        decision_reason=decision_reason,
     )
 
 

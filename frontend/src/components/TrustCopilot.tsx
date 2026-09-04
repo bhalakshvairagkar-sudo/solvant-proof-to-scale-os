@@ -15,7 +15,16 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { TrustCopilotResponse, TrustFactItem } from '../types';
-import { fetchTrustCopilot, fetchTrustFactBase, fetchAdversarialCurveballs } from '../api';
+import {
+  fetchTrustCopilot,
+  fetchTrustFactBase,
+  fetchAdversarialCurveballs,
+  fetchAuditEvents,
+  verifyAuditChain,
+  tamperAuditDemo,
+  resetAuditChain,
+} from '../api';
+import { AuditEvent, AuditChainVerificationResponse } from '../types';
 
 export const TrustCopilot: React.FC = () => {
   const [facts, setFacts] = useState<TrustFactItem[]>([]);
@@ -28,6 +37,10 @@ export const TrustCopilot: React.FC = () => {
   const [response, setResponse] = useState<TrustCopilotResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [showFactBase, setShowFactBase] = useState(false);
+  const [showAuditTrail, setShowAuditTrail] = useState(false);
+  const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
+  const [verificationResult, setVerificationResult] = useState<AuditChainVerificationResponse | null>(null);
+  const [verifying, setVerifying] = useState(false);
 
   const quickObjections = [
     {
@@ -85,6 +98,46 @@ export const TrustCopilot: React.FC = () => {
     handleAsk(q);
   };
 
+  const loadAuditTrail = async () => {
+    try {
+      const evts = await fetchAuditEvents();
+      setAuditEvents(evts);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleVerifyChain = async () => {
+    setVerifying(true);
+    try {
+      const res = await verifyAuditChain();
+      setVerificationResult(res);
+      await loadAuditTrail();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleTamperDemo = async () => {
+    try {
+      await tamperAuditDemo(2);
+      await handleVerifyChain();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleResetAuditChain = async () => {
+    try {
+      await resetAuditChain();
+      await handleVerifyChain();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleCustomSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (customQuestion.trim()) {
@@ -126,6 +179,21 @@ export const TrustCopilot: React.FC = () => {
               <Database className="w-3.5 h-3.5 text-emerald-400" />
               <span>{showFactBase ? 'Hide Fact Base' : 'Inspect Closed Fact Base'}</span>
               {showFactBase ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+            <button
+              onClick={() => {
+                const next = !showAuditTrail;
+                setShowAuditTrail(next);
+                if (next) {
+                  loadAuditTrail();
+                  handleVerifyChain();
+                }
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+            >
+              <FileCode2 className="w-3.5 h-3.5 text-cyan-400" />
+              <span>{showAuditTrail ? 'Hide Audit Trail' : 'Tamper-Evident Audit Trail'}</span>
+              {showAuditTrail ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </button>
           </div>
         </div>
@@ -184,6 +252,162 @@ export const TrustCopilot: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* DETERMINISTIC CLAIM GUARD VISUAL PIPELINE */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+              Deterministic Claim Guard Pipeline (Code Calculates. Groq Explains.)
+            </h3>
+          </div>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+            Claim Guard: deterministic fact-reference validation
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-center text-xs">
+          <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+            <span className="text-[10px] font-mono text-slate-400 block mb-1">STAGE 1</span>
+            <span className="font-bold text-white block">Closed Fact Base</span>
+            <span className="text-[10px] text-slate-500 block mt-0.5">Authoritative truth source</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+            <span className="text-[10px] font-mono text-slate-400 block mb-1">STAGE 2</span>
+            <span className="font-bold text-slate-200 block">Groq LLaMA 3.3</span>
+            <span className="text-[10px] text-slate-500 block mt-0.5">Drafts 5-step response</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+            <span className="text-[10px] font-mono text-slate-400 block mb-1">STAGE 3</span>
+            <span className="font-bold text-slate-200 block">Claim Extraction</span>
+            <span className="text-[10px] text-slate-500 block mt-0.5">Parses specific claims</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-slate-950 border border-cyan-900/60 bg-cyan-950/20">
+            <span className="text-[10px] font-mono text-cyan-400 block mb-1">STAGE 4</span>
+            <span className="font-bold text-cyan-300 block">Deterministic Guard</span>
+            <span className="text-[10px] text-cyan-500 block mt-0.5">Code checks fact references</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-slate-950 border border-amber-900/60 bg-amber-950/20">
+            <span className="text-[10px] font-mono text-amber-400 block mb-1">STAGE 5</span>
+            <span className="font-bold text-amber-300 block">Supported?</span>
+            <span className="text-[10px] text-amber-500 block mt-0.5">Yes: Display • No: Revert</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-slate-950 border border-emerald-900/60 bg-emerald-950/20">
+            <span className="text-[10px] font-mono text-emerald-400 block mb-1">STAGE 6</span>
+            <span className="font-bold text-emerald-300 block">SHA-256 Ledger</span>
+            <span className="text-[10px] text-emerald-500 block mt-0.5">Hash-chained audit log</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Tamper-Evident SHA-256 Audit Trail Drawer */}
+      {showAuditTrail && (
+        <div className="bg-slate-950 border border-cyan-800/70 rounded-2xl p-6 shadow-2xl space-y-4 animate-in fade-in duration-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <FileCode2 className="w-4 h-4 text-cyan-400" />
+                <h3 className="font-bold text-white text-sm">
+                  Tamper-Evident Audit Ledger (SHA-256 Hash Chaining)
+                </h3>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Every pilot milestone, health verdict, and trust response is deterministically hashed and linked to the previous block.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleVerifyChain}
+                disabled={verifying}
+                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow flex items-center gap-1.5"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>{verifying ? 'Verifying...' : 'Verify Hash Chain'}</span>
+              </button>
+              <button
+                onClick={handleTamperDemo}
+                className="px-3 py-1.5 rounded-lg bg-rose-950 hover:bg-rose-900 border border-rose-700/80 text-rose-200 font-bold text-xs transition shadow flex items-center gap-1.5"
+              >
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                <span>Test Tamper Detection</span>
+              </button>
+              <button
+                onClick={handleResetAuditChain}
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Verification Status Banner */}
+          {verificationResult && (
+            <div
+              className={`p-3 rounded-xl border flex items-center justify-between text-xs ${
+                verificationResult.valid
+                  ? 'bg-emerald-950/50 border-emerald-700/80 text-emerald-300'
+                  : 'bg-rose-950/70 border-rose-600 text-rose-200 animate-pulse'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                {verificationResult.valid ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                )}
+                <span>
+                  <strong>{verificationResult.valid ? 'Chain Verified Valid:' : 'Tampering Detected:'}</strong>{' '}
+                  {verificationResult.valid
+                    ? `All ${verificationResult.events_checked} blocks verified. SHA-256 event hash links continuously unbroken to genesis.`
+                    : `${verificationResult.reason || 'Cryptographic mismatch detected'}`}
+                </span>
+              </div>
+              <span className="font-mono text-[10px] text-slate-400 hidden md:block">
+                Head: {verificationResult.chain_head.slice(0, 12)}...
+              </span>
+            </div>
+          )}
+
+          {/* Audit Events Table */}
+          <div className="overflow-x-auto max-h-72 overflow-y-auto">
+            <table className="w-full text-xs font-mono">
+              <thead>
+                <tr className="border-b border-slate-800 text-slate-400 text-left">
+                  <th className="pb-2">Seq #</th>
+                  <th className="pb-2">Timestamp</th>
+                  <th className="pb-2">Type</th>
+                  <th className="pb-2">Account</th>
+                  <th className="pb-2">Summary</th>
+                  <th className="pb-2 text-right">SHA-256 Event Hash</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                {auditEvents.map((evt) => (
+                  <tr key={evt.event_id} className="hover:bg-slate-900/50">
+                    <td className="py-2 text-slate-400">#{evt.sequence_number}</td>
+                    <td className="py-2 text-slate-500 text-[10px]">{evt.timestamp.slice(0, 19).replace('T', ' ')}</td>
+                    <td className="py-2">
+                      <span className="px-1.5 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-800 text-[10px]">
+                        {evt.event_type}
+                      </span>
+                    </td>
+                    <td className="py-2 text-emerald-400">{evt.account_id}</td>
+                    <td className="py-2 text-slate-200 max-w-xs truncate" title={evt.summary}>
+                      {evt.summary}
+                    </td>
+                    <td className="py-2 text-right text-cyan-400 text-[10px]">
+                      {evt.event_hash.slice(0, 10)}...{evt.event_hash.slice(-6)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
 
       {/* Closed Fact Base Inspector Drawer */}
       {showFactBase && (

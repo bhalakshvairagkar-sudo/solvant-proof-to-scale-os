@@ -25,7 +25,7 @@ class AccountDatabase:
         simulated_wau_pct: Optional[float] = None,
         simulated_time_reduction_pct: Optional[float] = None,
         simulated_retention_pct: Optional[float] = None,
-        isolate_wau_effect: bool = False,
+        isolate_wau_effect: bool = True,
     ) -> Optional[Account]:
         acct = self._accounts.get(account_id)
         if not acct:

@@ -27,7 +27,8 @@ import {
   Legend,
 } from 'recharts';
 import { AccountItemResponse, AdoptionDoctorResponse } from '../types';
-import { simulateAccount, fetchAdoptionDoctor, resetAccounts, fetchAccountDetail } from '../api';
+import { simulateAccount, fetchAdoptionDoctor, resetAccounts, fetchAccountDetail, fetchAdoptionWorkstream } from '../api';
+import { AdoptionWorkstream } from '../types';
 
 interface AccountDeepDiveProps {
   accounts: AccountItemResponse[];
@@ -48,6 +49,7 @@ export const AccountDeepDive: React.FC<AccountDeepDiveProps> = ({
   const [isSimulating, setIsSimulating] = useState(false);
   const [doctorLoading, setDoctorLoading] = useState(false);
   const [doctorResponse, setDoctorResponse] = useState<AdoptionDoctorResponse | null>(null);
+  const [workstream, setWorkstream] = useState<AdoptionWorkstream | null>(null);
 
   // Load account data
   useEffect(() => {
@@ -55,8 +57,9 @@ export const AccountDeepDive: React.FC<AccountDeepDiveProps> = ({
     if (target) {
       setCurrentData(target);
       setWauSlider(target.health.frequency_score);
-      // Auto-fetch doctor diagnosis
+      // Auto-fetch doctor diagnosis and adoption workstream
       loadDoctorDiagnosis(target.account.id);
+      fetchAdoptionWorkstream(target.account.id).then(setWorkstream).catch(console.error);
     }
   }, [selectedAccountId, accounts]);
 
@@ -112,6 +115,41 @@ export const AccountDeepDive: React.FC<AccountDeepDiveProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* PRESELECTED DEMO MODE QUICK SELECTORS */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+          <span className="text-xs font-bold text-white uppercase tracking-wider">
+            Demo Scenarios:
+          </span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full sm:w-auto">
+          {[
+            { id: 'acct_acme_corp', name: 'Acme Corp', tag: '85% WAU • Expand', color: 'emerald' },
+            { id: 'acct_meridian_financial', name: 'Meridian Fin', tag: '83% WAU • Expand', color: 'emerald' },
+            { id: 'acct_nova_industries', name: 'Nova Industries', tag: '61.5% WAU • Watch', color: 'amber' },
+            { id: 'acct_apex_global', name: 'Apex Global', tag: '27% WAU • Intervene', color: 'rose' },
+          ].map((anchor) => (
+            <button
+              key={anchor.id}
+              onClick={() => onSelectAccountId(anchor.id)}
+              className={`px-3 py-2 rounded-xl text-left border text-xs transition ${
+                selectedAccountId === anchor.id
+                  ? anchor.color === 'emerald'
+                    ? 'bg-emerald-950 border-emerald-500 text-emerald-300 font-bold shadow'
+                    : anchor.color === 'amber'
+                    ? 'bg-amber-950 border-amber-500 text-amber-300 font-bold shadow'
+                    : 'bg-rose-950 border-rose-500 text-rose-300 font-bold shadow'
+                  : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+              }`}
+            >
+              <span className="block font-bold text-white truncate">{anchor.name}</span>
+              <span className="text-[10px] block opacity-80">{anchor.tag}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Top Selector & Account Profile Header */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">

@@ -59,7 +59,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
               </div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-800/80 text-cyan-300 text-xs font-semibold">
                 <Database className="w-3.5 h-3.5 text-cyan-400" />
-                Synthetic Benchmark Data — 21 Calibrated Enterprise Cohorts
+                Synthetic Benchmark Data — 24 Calibrated Enterprise Cohorts
               </div>
             </div>
             <h2 className="text-2xl font-bold text-white tracking-tight">
@@ -90,6 +90,54 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* PINNED DEMO ANCHORS (Preselected Judge Walkthrough Mode) */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+              Pinned Demo Anchors (Live Hackathon Evaluation)
+            </h3>
+          </div>
+          <span className="text-[10px] font-mono text-slate-400">
+            Click any anchor to jump directly to deep-dive diagnosis
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { id: 'acct_acme_corp', name: 'Acme Corp', role: 'Anchor 1: Clear Winner', wau: '85.4% WAU • Day 56', status: 'Expansion Ready (92.9)', verdict: 'EXPAND', border: 'border-emerald-500/40 bg-gradient-to-b from-emerald-950/20 to-slate-900' },
+            { id: 'acct_meridian_financial', name: 'Meridian Financial', role: 'Anchor 2: Strong Performer', wau: '83.0% WAU • Day 52', status: 'Expansion Ready (89.6)', verdict: 'EXPAND', border: 'border-emerald-500/40 bg-gradient-to-b from-emerald-950/20 to-slate-900' },
+            { id: 'acct_nova_industries', name: 'Nova Industries', role: 'Anchor 3: Boundary Case', wau: '61.5% WAU • Day 42', status: 'Healthy Watch (68.7)', verdict: 'HOLD', border: 'border-amber-500/40 bg-gradient-to-b from-amber-950/20 to-slate-900' },
+            { id: 'acct_apex_global', name: 'Apex Global', role: 'Anchor 4: Day-45 SLA Breach', wau: '27.3% WAU • Day 45', status: 'At Risk (30.2)', verdict: 'INTERVENE', border: 'border-rose-500/40 bg-gradient-to-b from-rose-950/20 to-slate-900' },
+          ].map((anchor) => (
+            <button
+              key={anchor.id}
+              onClick={() => onSelectAccount(anchor.id)}
+              className={`p-4 rounded-xl border ${anchor.border} text-left transition hover:scale-[1.02] shadow-lg flex flex-col justify-between`}
+            >
+              <div>
+                <span className="text-[10px] font-mono text-slate-400 block uppercase mb-1">{anchor.role}</span>
+                <span className="text-sm font-bold text-white block">{anchor.name}</span>
+                <span className="text-xs text-slate-300 font-mono mt-0.5 block">{anchor.wau}</span>
+              </div>
+              <div className="mt-3 pt-2 border-t border-slate-800 flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-200">{anchor.status}</span>
+                <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded ${
+                  anchor.verdict === 'EXPAND'
+                    ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                    : anchor.verdict === 'HOLD'
+                    ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                    : 'bg-rose-950 text-rose-300 border border-rose-800'
+                }`}>
+                  {anchor.verdict}
+                </span>
+              </div>
+            </button>
+          ))}
         </div>
       </div>
 

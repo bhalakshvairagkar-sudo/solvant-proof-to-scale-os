@@ -27,7 +27,11 @@ from app.models import (
     AccountHealthResponse,
     PricingSimulationOutput,
 )
-from app.trust_copilot import get_deterministic_trust_response, TRUST_FACT_BASE
+from app.trust_copilot import (
+    get_deterministic_trust_response,
+    validate_and_guard_trust_response,
+    TRUST_FACT_BASE,
+)
 
 logger = logging.getLogger("groq_service")
 logging.basicConfig(level=logging.INFO)
@@ -347,7 +351,7 @@ async def call_groq_trust_copilot(question: str) -> TrustCopilotResponse:
                     verified_claims=og_data.get("verified_claims", ["Grounded in closed fact base"]),
                     unsupported_or_limited_claims=og_data.get("unsupported_or_limited_claims", []),
                 )
-                return TrustCopilotResponse(
+                raw_resp = TrustCopilotResponse(
                     step1_acknowledge=parsed.get("step1_acknowledge", ""),
                     step2_clarify=parsed.get("step2_clarify", ""),
                     step3_evidence=parsed.get("step3_evidence", ""),
@@ -357,6 +361,7 @@ async def call_groq_trust_copilot(question: str) -> TrustCopilotResponse:
                     is_live_llm=True,
                     model_used=model_name,
                 )
+                return validate_and_guard_trust_response(raw_resp, question)
     except Exception as e:
         logger.warning(f"Groq trust copilot call failed: {e}. Falling back to deterministic baseline.")
 

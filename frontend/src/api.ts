@@ -7,6 +7,9 @@ import {
   PricingStrategistResponse,
   TrustCopilotResponse,
   TrustFactItem,
+  AuditEvent,
+  AuditChainVerificationResponse,
+  AdoptionWorkstream,
 } from './types';
 
 const API_BASE = '/api';
@@ -16,6 +19,9 @@ export async function fetchHealth(): Promise<{
   has_groq_api_key: boolean;
   groq_model: string;
   golden_rule: string;
+  fact_base_count?: number;
+  audit_ledger_status?: string;
+  audit_events_count?: number;
 }> {
   const res = await fetch(`${API_BASE}/health`);
   return res.json();
@@ -86,6 +92,11 @@ export async function fetchAdoptionDoctor(accountId: string): Promise<AdoptionDo
   return res.json();
 }
 
+export async function fetchAdoptionWorkstream(accountId: string): Promise<AdoptionWorkstream> {
+  const res = await fetch(`${API_BASE}/adoption-workstream/${accountId}`);
+  return res.json();
+}
+
 export async function runPricingSimulation(
   params: PricingSimulationInput
 ): Promise<PricingSimulationOutput> {
@@ -119,6 +130,31 @@ export async function fetchTrustCopilot(question: string): Promise<TrustCopilotR
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ question }),
   });
+  return res.json();
+}
+
+export async function fetchAuditEvents(limit: number = 50): Promise<AuditEvent[]> {
+  const res = await fetch(`${API_BASE}/audit/events?limit=${limit}`);
+  return res.json();
+}
+
+export async function verifyAuditChain(): Promise<AuditChainVerificationResponse> {
+  const res = await fetch(`${API_BASE}/audit/verify`, { method: 'POST' });
+  return res.json();
+}
+
+export async function tamperAuditDemo(sequenceNumber: number = 2): Promise<{ status: string; tampered_sequence?: number }> {
+  const res = await fetch(`${API_BASE}/audit/tamper-demo?sequence_number=${sequenceNumber}`, { method: 'POST' });
+  return res.json();
+}
+
+export async function resetAuditChain(): Promise<{ status: string; message: string }> {
+  const res = await fetch(`${API_BASE}/audit/reset`, { method: 'POST' });
+  return res.json();
+}
+
+export async function fetchModelAssumptions(): Promise<Record<string, any>> {
+  const res = await fetch(`${API_BASE}/model-assumptions`);
   return res.json();
 }
 
