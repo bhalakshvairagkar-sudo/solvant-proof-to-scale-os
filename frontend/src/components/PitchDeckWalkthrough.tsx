@@ -100,7 +100,7 @@ export const PitchDeckWalkthrough: React.FC<{
       points: [
         'Layer 1: Workflow Configuration — Deep ledger taxonomies and variance formulas tuned over 60 days cannot be replaced by dropping a generic chat prompt.',
         'Layer 2: Intervention History — Granular records of prompt training and user friction resolution create organizational stickiness.',
-        'Layer 3: Outcome-Verified Data Trail — 500+ cryptographically logged commentary outputs and 28% verified hours saved give the CFO audit proof to defend Solvant.',
+        'Layer 3: Outcome-Verified Data Trail — 500+ audited commentary outputs with SHA-256 hash chains and 28% verified hours saved give the CFO audit proof to defend Solvant.',
       ],
       actionLabel: 'Next: Trust & Incumbent Defense →',
       actionFn: () => setCurrentSlide(7),

@@ -1,5 +1,163 @@
 from typing import List
-from app.models import Account, WeeklyLog
+from app.models import Account, WeeklyLog, StakeholderRole, InterventionHistoryItem
+
+
+def build_stakeholders_for_account(item: dict) -> list:
+    is_at_risk = item.get("stage") in ["At Risk", "Intervention Active"]
+    is_expansion = item.get("stage") == "Expansion Ready"
+    
+    return [
+        StakeholderRole(
+            role="Economic Buyer",
+            name=f"Dr. {item.get('buyer_title', 'VP Finance').split()[-1]}",
+            title=item.get("buyer_title", "VP Finance"),
+            identified=True,
+            notes="Sign-off authority for $12k pilot and 175-seat expansion.",
+        ),
+        StakeholderRole(
+            role="Executive Sponsor",
+            name="Alexander Wright",
+            title="VP Global Financial Operations",
+            identified=True if not is_at_risk else False,
+            notes="Active steering committee sponsor." if not is_at_risk else "Pending executive sponsorship confirmation.",
+        ),
+        StakeholderRole(
+            role="Workflow Owner",
+            name=item.get("champion_name", "Sarah Lin"),
+            title=item.get("champion_title", "Director of FP&A"),
+            identified=True,
+            notes="Operational owner managing monthly close cycle.",
+        ),
+        StakeholderRole(
+            role="IT/Security Owner",
+            name="Raj Patel",
+            title="Head of Enterprise Cloud Security & KMS",
+            identified=True,
+            notes="Approved VPC endpoint with zero external data egress.",
+        ),
+        StakeholderRole(
+            role="End-User Champion",
+            name="Jessica Miller" if not is_at_risk else "Vacant / Unassigned",
+            title="Senior FP&A Lead Analyst",
+            identified=True if not is_at_risk else False,
+            notes="Day-to-day power user driving analyst prompt consistency." if not is_at_risk else "Champion turnover; needs immediate replacement.",
+        ),
+    ]
+
+
+def build_intervention_history_for_account(item: dict) -> list:
+    account_id = item.get("id", "")
+    days = item.get("pilot_days_elapsed", 50)
+    history = []
+
+    history.append(
+        InterventionHistoryItem(
+            day=0,
+            date="2026-07-01",
+            event_type="MILESTONE",
+            description="Pilot kick-off & stateless VPC general ledger endpoint deployed.",
+            impact_summary="50 invited analysts provisioned with SSO.",
+            status="COMPLETED",
+        )
+    )
+    history.append(
+        InterventionHistoryItem(
+            day=14,
+            date="2026-07-15",
+            event_type="MILESTONE",
+            description="First variance analysis draft completed & approved by FP&A champion.",
+            impact_summary="Realized 4.2 analyst hours saved on initial close cycle.",
+            status="COMPLETED",
+        )
+    )
+
+    if account_id == "acct_apex_global":
+        history.append(
+            InterventionHistoryItem(
+                day=38,
+                date="2026-08-08",
+                event_type="STALL_DETECTED",
+                description="Day-38 Adoption Stall: WAU dropped to 27% due to ERP ledger format mismatch.",
+                impact_summary="Weekly usage trend slope turned negative (-0.038/wk).",
+                status="COMPLETED",
+            )
+        )
+        history.append(
+            InterventionHistoryItem(
+                day=42,
+                date="2026-08-12",
+                event_type="INTERVENTION_DISPATCHED",
+                description="Workflow Redesign & Custom Prompt Library Sprint dispatched with Solutions Engineer.",
+                impact_summary="Remapping ERP column variance schema into custom JSON output.",
+                status="COMPLETED",
+            )
+        )
+        history.append(
+            InterventionHistoryItem(
+                day=52,
+                date="2026-08-22",
+                event_type="RE_MEASUREMENT",
+                description="Re-measurement audit: Analyst engagement stabilizing; awaiting management sign-off.",
+                impact_summary="Stall risk score reduced from 95 to 80.",
+                status="COMPLETED",
+            )
+        )
+    elif account_id == "acct_nova_industries":
+        history.append(
+            InterventionHistoryItem(
+                day=45,
+                date="2026-08-15",
+                event_type="STALL_DETECTED",
+                description="Day-45 SLA warning fired: Workflow completion lagging at 68%.",
+                impact_summary="Analysts hesitating on complex management variance prompts.",
+                status="COMPLETED",
+            )
+        )
+        history.append(
+            InterventionHistoryItem(
+                day=47,
+                date="2026-08-17",
+                event_type="INTERVENTION_DISPATCHED",
+                description="Targeted 60-Min Variance Prompt Engineering Workshop conducted.",
+                impact_summary="Prompt Cookbook distributed to 32 active analysts.",
+                status="COMPLETED",
+            )
+        )
+        history.append(
+            InterventionHistoryItem(
+                day=55,
+                date="2026-08-25",
+                event_type="RE_MEASUREMENT",
+                description="Re-measurement check: Completion rate recovered to 78%, WAU holding steady.",
+                impact_summary="Account stabilized in Healthy Watch band.",
+                status="COMPLETED",
+            )
+        )
+    else:
+        history.append(
+            InterventionHistoryItem(
+                day=30,
+                date="2026-07-31",
+                event_type="MILESTONE",
+                description="Activation Gate passed: >=70% activation confirmed, habitual usage established.",
+                impact_summary="Habit score verified at 85/100.",
+                status="COMPLETED",
+            )
+        )
+        if days >= 50:
+            history.append(
+                InterventionHistoryItem(
+                    day=50,
+                    date="2026-08-20",
+                    event_type="EXPANSION_CLEARED",
+                    description="Executive value realization review: verified >=20% time saved & 3.4x ROI.",
+                    impact_summary="Prepared for Day-60 graduation & 175-seat expansion.",
+                    status="COMPLETED",
+                )
+            )
+
+    return history
+
 
 
 def generate_weekly_logs(account_id: str, wau_history: List[float], base_users: int, base_time_saved: float) -> List[WeeklyLog]:
@@ -586,7 +744,42 @@ def get_seed_accounts() -> List[Account]:
             base_users=item["activated_users"],
             base_time_saved=item["workflow_time_reduction_pct"],
         )
-        acct = Account(**item, recent_logs=logs)
+        stakeholders = build_stakeholders_for_account(item)
+        history = build_intervention_history_for_account(item)
+        
+        is_at_risk = item.get("stage") in ["At Risk", "Intervention Active"]
+        is_expansion = item.get("stage") == "Expansion Ready"
+        
+        if is_expansion:
+            roi = round(3.2 + (item.get("workflow_time_reduction_pct", 0.25) * 2.5), 1)
+            comp_rate = 0.94
+            err_red = 0.24
+            alignment = 100.0 if item.get("id") == "acct_meridian_financial" else 80.0
+            d60 = "HEALTHY"
+        elif is_at_risk:
+            roi = round(1.0 + (item.get("workflow_time_reduction_pct", 0.10) * 2.0), 1)
+            comp_rate = 0.54
+            err_red = 0.06
+            alignment = 40.0
+            d60 = "STALLED"
+        else:
+            roi = round(2.0 + (item.get("workflow_time_reduction_pct", 0.18) * 1.5), 1)
+            comp_rate = 0.76
+            err_red = 0.14
+            alignment = 60.0
+            d60 = "AT RISK"
+
+        acct = Account(
+            **item,
+            recent_logs=logs,
+            stakeholders=stakeholders,
+            stakeholder_alignment_score=alignment,
+            roi_multiplier=roi,
+            workflow_completion_rate=comp_rate,
+            error_reduction_pct=err_red,
+            day_60_status=d60,
+            intervention_history=history,
+        )
         accounts.append(acct)
 
     return accounts

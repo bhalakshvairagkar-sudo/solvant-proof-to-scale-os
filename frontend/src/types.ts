@@ -11,6 +11,42 @@ export interface WeeklyLog {
   feedback_score: number;
 }
 
+export interface StakeholderRole {
+  role: string; // "Economic Buyer", "Executive Sponsor", "Workflow Owner", "IT/Security Owner", "End-User Champion"
+  name: string;
+  title: string;
+  identified: boolean;
+  notes?: string;
+}
+
+export interface InterventionHistoryItem {
+  day: number;
+  date: string;
+  event_type: string;
+  description: string;
+  impact_summary?: string;
+  status: string;
+}
+
+export interface Day60StallAssessment {
+  status: 'HEALTHY' | 'AT RISK' | 'STALLED' | string;
+  is_stalled: boolean;
+  stall_risk_score: number;
+  failing_indicators: string[];
+  healthy_indicators: string[];
+  stall_reason: string;
+}
+
+export interface RootCauseDiagnosis {
+  primary_cause: string;
+  category: 'GTM-CONTROLLABLE' | 'PARTIALLY CONTROLLABLE' | 'ORGANIZATIONAL / EXTERNAL' | string;
+  controllability_score_pct: number;
+  contributing_factors: string[];
+  prescribed_intervention: string;
+  action_plan_steps: string[];
+  remeasurement_target: string;
+}
+
 export interface Account {
   id: string;
   name: string;
@@ -33,6 +69,13 @@ export interface Account {
   buyer_title: string;
   primary_workflow: string;
   recent_logs: WeeklyLog[];
+  stakeholders?: StakeholderRole[];
+  stakeholder_alignment_score?: number;
+  roi_multiplier?: number;
+  workflow_completion_rate?: number;
+  error_reduction_pct?: number;
+  day_60_status?: string;
+  intervention_history?: InterventionHistoryItem[];
 }
 
 export interface HealthScoreBreakdown {
@@ -79,6 +122,12 @@ export interface ExpansionCriteriaStatus {
   passed_conditions?: string[];
   trigger_status?: Record<string, boolean>;
   decision_reason?: string;
+  roi_multiplier_met?: boolean;
+  roi_multiplier_value?: number;
+  workflow_completion_met?: boolean;
+  workflow_completion_value?: number;
+  evidence_bullets?: string[];
+  traceability_chain?: Record<string, any>;
 }
 
 export interface AccountItemResponse {
@@ -301,6 +350,11 @@ export interface TrustCopilotResponse {
   step3_evidence: string;
   step4_claim_limits: string;
   step5_risk_reduction: string;
+  the_concern?: string;
+  what_solvant_does?: string;
+  what_customer_controls?: string;
+  what_customer_can_verify?: string;
+  what_solvant_does_not_claim?: string;
   claims?: TrustClaimRef[];
   overclaim_guard: OverclaimGuard;
   audit_event_id?: string;
@@ -365,4 +419,100 @@ export interface AdoptionWorkstream {
   pilot_days_elapsed: number;
   current_phase: string;
   phases: AdoptionPhaseMilestone[];
+  day_60_assessment?: Day60StallAssessment;
+  root_cause?: RootCauseDiagnosis;
+  remeasurement_stage?: string;
+  stakeholders?: StakeholderRole[];
+}
+
+
+export interface GTMResearchItem {
+  company: string;
+  ticker: string;
+  market_position: string;
+  land_motion: string;
+  expansion_motion: string;
+  pricing_model: string;
+  ai_mechanism: string;
+  why_it_works: string;
+  transferable_lesson: string;
+  non_transferable_lesson: string;
+  why_not_transferable: string;
+}
+
+export interface AdoptionGapItem {
+  root_cause: string;
+  can_gtm_fix: 'YES' | 'PARTIAL' | 'NO' | string;
+  how_solvant_remediates: string;
+  doctor_connection: string;
+}
+
+export interface PricingBenchmarkItem {
+  company: string;
+  pricing_mechanism: string;
+  list_price: string;
+  seat_based: string;
+  usage_based: string;
+  ai_specific_meter: string;
+  expansion_mechanism: string;
+  solvant_lesson: string;
+  source: string;
+}
+
+export interface SolvantSynthesisStep {
+  step: number;
+  title: string;
+  description: string;
+  proof_point: string;
+}
+
+export interface SolvantStrategicSynthesis {
+  core_thesis: string;
+  sub_thesis: string;
+  pipeline_steps: SolvantSynthesisStep[];
+  incumbent_vs_solvant_comparison: {
+    incumbent: {
+      strategy: string;
+      consequence: string;
+    };
+    solvant: {
+      strategy: string;
+      consequence: string;
+    };
+  };
+}
+
+export interface GTMResearchSuiteResponse {
+  gtm_intelligence: GTMResearchItem[];
+  adoption_gap_matrix: AdoptionGapItem[];
+  pricing_benchmark: PricingBenchmarkItem[];
+  synthesis: SolvantStrategicSynthesis;
+}
+
+
+export interface GTMConnectedStage {
+  stage_number: number;
+  id: string;
+  title: string;
+  subtitle: string;
+  summary: string;
+  key_mechanics: string[];
+  why_it_works: string;
+}
+
+export interface OstravaDecisionResponse {
+  verdict: 'DEFEND_AND_EXPAND' | 'MOVE_WEDGE' | 'STOP_AND_REASSESS' | string;
+  headline: string;
+  action_plan: string[];
+  defense_pillars: string[];
+  prohibited_actions: string[];
+  contingency_stage: string;
+  core_message: string;
+}
+
+export interface GTMArchitectureResponse {
+  connected_stages: GTMConnectedStage[];
+  prohibited_actions: string[];
+  defense_pillars: { pillar: string; description: string }[];
+  contingency_stages: { stage: string; action: string }[];
 }

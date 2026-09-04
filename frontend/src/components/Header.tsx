@@ -11,6 +11,8 @@ import {
   HelpCircle,
   Key,
   Database,
+  BookOpen,
+  GitBranch,
 } from 'lucide-react';
 import { PortfolioSummary } from '../types';
 import { setGroqConfig } from '../api';
@@ -166,6 +168,20 @@ export const Header: React.FC<HeaderProps> = ({
         <nav role="tablist" aria-label="Main Application Views" className="flex items-center gap-1 mt-3.5 border-t border-slate-800/80 pt-2 overflow-x-auto text-xs font-medium">
           <button
             role="tab"
+            aria-selected={activeTab === 'gtm_architecture'}
+            onClick={() => setActiveTab('gtm_architecture')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-emerald-400 ${
+              activeTab === 'gtm_architecture'
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+            }`}
+          >
+            <GitBranch className="w-4 h-4" />
+            <span>1. GTM Architecture & Ostrava</span>
+          </button>
+
+          <button
+            role="tab"
             aria-selected={activeTab === 'portfolio'}
             onClick={() => setActiveTab('portfolio')}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-emerald-400 ${
@@ -175,7 +191,7 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>1. Portfolio Overview</span>
+            <span>2. Portfolio Overview</span>
           </button>
 
           <button
@@ -189,7 +205,7 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <Cpu className="w-4 h-4" />
-            <span>2. Account Deep-Dive & Live WAU Slider</span>
+            <span>3. Account Deep-Dive & Live WAU Slider</span>
           </button>
 
           <button
@@ -203,7 +219,21 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <TrendingUp className="w-4 h-4" />
-            <span>3. Pricing Simulator & NorthBridge Shadow</span>
+            <span>4. Pricing Simulator & NorthBridge Shadow</span>
+          </button>
+
+          <button
+            role="tab"
+            aria-selected={activeTab === 'research'}
+            onClick={() => setActiveTab('research')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-emerald-400 ${
+              activeTab === 'research'
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+            }`}
+          >
+            <BookOpen className="w-4 h-4" />
+            <span>5. GTM Research & Synthesis</span>
           </button>
 
           <button
@@ -217,7 +247,7 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <ShieldCheck className="w-4 h-4" />
-            <span>4. Trust Copilot (Overclaim Guard)</span>
+            <span>6. Trust Copilot (Data Residency & Lock-in)</span>
           </button>
 
           <button
@@ -231,7 +261,7 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <Sliders className="w-4 h-4" />
-            <span>Wedge Matrix & Moat (P1)</span>
+            <span>7. Strategic Land Wedge & Moat</span>
           </button>
         </nav>
       </div>

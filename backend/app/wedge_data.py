@@ -55,7 +55,7 @@ COMPETITOR_PRICING_TEARDOWNS: List[Dict[str, Any]] = [
         "pricing_mechanics": "Snowflake credits ($2.00–$4.00/credit) & Datadog hosts/custom metrics. Customers commit to an annual dollar pool and burn down against actual machine compute.",
         "why_it_succeeds": "Unmatched initial customer alignment: zero shelfware risk on day 1. Customers only pay for what runs, driving rapid developer adoption.",
         "failure_mode_in_genai": "The 'Bill Shock' Trap: CFOs dread unconstrained consumption for knowledge workers. A single unconstrained query loop or runaway token task can burn $5,000 in minutes. Result: Enterprise CFOs mandate hard seat caps or freeze consumption pilots.",
-        "solvant_solution": "Hybrid Metered Certainty: $30/active-user/month (metered on WAU, not seats) + predictable usage-credit buffers ($0.40/run above 100). Zero bill shock; 100% active-usage alignment.",
+        "solvant_solution": "Hybrid Metered Certainty: $30/active-user/month (metered on WAU, not seats) + predictable usage-credit buffers ($0.40/run above 100). Zero bill shock; Full active-usage alignment.",
     },
     {
         "competitor": "Microsoft 365 Copilot",
@@ -80,7 +80,7 @@ THREE_LAYER_MOAT: List[Dict[str, str]] = [
     },
     {
         "layer": "3. Outcome-Verified Data Trail",
-        "description": "Cryptographically auditable log of 500+ verified monthly commentary outputs, exact time savings, and analyst sign-offs stored in customer's own cloud.",
+        "description": "Audited log of 500+ verified monthly commentary outputs, exact time savings, and analyst sign-offs stored in customer's own cloud.",
         "defensibility": "Audit proof: CFO cannot justify replacing a proven 28% time-saving tool with an unmeasured free bundled seat.",
     },
 ]
@@ -92,7 +92,7 @@ ADVERSARIAL_CURVEBALL_REHEARSALS: List[Dict[str, Any]] = [
         "initial_objection": "Do you hold a completed SOC2 Type II certification right now?",
         "solvant_opening": "No, and we will state that plainly: we hold a completed SOC2 Type I. SOC2 Type II is currently in its 6-month audit observation period with our AICPA auditor, targeting completion in Q4.",
         "adversarial_followup": "Then why should my risk committee approve routing general ledger data to an uncertified early-stage vendor instead of Microsoft?",
-        "adversarial_rebuttal": "Because Microsoft requires full tenant data ingestion into their multi-tenant cloud. Solvant deploys stateless inference in your designated regional VPC boundary under Zero Data Retention (ZDR) agreements. Our $12k deposit is 100% refundable if our SOC2 Type I package and security addendum do not clear your CISO review. We give you contractual verification, not marketing claims.",
+        "adversarial_rebuttal": "Because Solvant deploys stateless inference strictly in your designated regional VPC boundary under Zero Data Retention (ZDR) agreements. Customer prompts and ledgers are never retained or used to train public models. Our $12k deposit is contractually refundable if our SOC2 Type I package and security addendum do not clear your CISO review. We give you contractual verification, not marketing claims.",
     },
     {
         "persona": "Skeptical CFO (Defending Bundled Microsoft E5)",

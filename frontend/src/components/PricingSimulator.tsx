@@ -405,7 +405,7 @@ export const PricingSimulator: React.FC = () => {
                 className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-emerald-500"
               />
               <div className="flex justify-between text-[10px] text-slate-500">
-                <span>100% refundable against SLA</span>
+                <span>Refundable against SLA</span>
                 <span className="text-emerald-400 font-mono">
                   {output?.pilot_economics?.margin_pct}% margin
                 </span>

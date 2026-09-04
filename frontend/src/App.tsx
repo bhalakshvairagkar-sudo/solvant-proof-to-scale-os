@@ -4,13 +4,15 @@ import { PortfolioView } from './components/PortfolioView';
 import { AccountDeepDive } from './components/AccountDeepDive';
 import { PricingSimulator } from './components/PricingSimulator';
 import { TrustCopilot } from './components/TrustCopilot';
+import { GTMResearchIntelligence } from './components/GTMResearchIntelligence';
+import { GTMArchitectureView } from './components/GTMArchitectureView';
 import { WedgeMatrix } from './components/WedgeMatrix';
 import { PitchDeckWalkthrough } from './components/PitchDeckWalkthrough';
 import { AccountItemResponse, PortfolioSummary } from './types';
 import { fetchAccounts, fetchPortfolioSummary, fetchHealth, resetAccounts } from './api';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>('portfolio');
+  const [activeTab, setActiveTab] = useState<string>('gtm_architecture');
   const [selectedAccountId, setSelectedAccountId] = useState<string>('acct_acme_corp');
   const [accounts, setAccounts] = useState<AccountItemResponse[]>([]);
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
@@ -55,6 +57,30 @@ export const App: React.FC = () => {
     setActiveTab('account_deepdive');
   };
 
+  const handleJudgeScenario = (scenarioKey: string) => {
+    switch (scenarioKey) {
+      case 'healthy_account':
+        setSelectedAccountId('acct_acme_corp');
+        setActiveTab('account_deepdive');
+        break;
+      case 'day_60_stall':
+        setSelectedAccountId('acct_apex_global');
+        setActiveTab('account_deepdive');
+        break;
+      case 'pricing_shock':
+        setActiveTab('pricing');
+        break;
+      case 'trust_objection':
+        setActiveTab('trust');
+        break;
+      case 'ostrava_responds':
+        setActiveTab('gtm_architecture');
+        break;
+      default:
+        break;
+    }
+  };
+
   const handleJumpToTab = (tab: string, accountId?: string) => {
     if (accountId) {
       setSelectedAccountId(accountId);
@@ -86,6 +112,16 @@ export const App: React.FC = () => {
           </div>
         ) : (
           <>
+            {activeTab === 'gtm_architecture' && (
+              <GTMArchitectureView
+                onSelectJudgeScenario={handleJudgeScenario}
+                onResetDemo={handleResetData}
+                onNavigateToDeepDive={() => setActiveTab('account_deepdive')}
+                onNavigateToPricing={() => setActiveTab('pricing')}
+                onNavigateToTrust={() => setActiveTab('trust')}
+              />
+            )}
+
             {activeTab === 'portfolio' && (
               <PortfolioView
                 accounts={accounts}
@@ -104,6 +140,14 @@ export const App: React.FC = () => {
             )}
 
             {activeTab === 'pricing' && <PricingSimulator />}
+
+            {activeTab === 'research' && (
+              <GTMResearchIntelligence
+                onNavigateToDeepDive={() => setActiveTab('account_deepdive')}
+                onNavigateToPricing={() => setActiveTab('pricing')}
+                onNavigateToTrust={() => setActiveTab('trust')}
+              />
+            )}
 
             {activeTab === 'trust' && <TrustCopilot />}
 
@@ -129,7 +173,7 @@ export const App: React.FC = () => {
             Solvant Labs • Enterprise AI Adoption Infrastructure & Deterministic GTM Engine
           </span>
           <span className="font-mono text-slate-400">
-            Groq Explain-Only Layer • Zero Hallucination Mode Active
+            Groq Explain-Only Layer • Deterministic Core + Grounded AI
           </span>
         </div>
       </footer>

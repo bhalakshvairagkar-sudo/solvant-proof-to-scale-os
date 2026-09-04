@@ -44,15 +44,15 @@ export const TrustCopilot: React.FC = () => {
 
   const quickObjections = [
     {
-      label: '1. Data Residency',
+      label: '1. DATA RESIDENCY (Sovereignty & VPC)',
       q: 'Where is our financial data stored and who has access?',
     },
     {
-      label: '2. Model Training',
+      label: '2. MODEL TRAINING (Zero Data Retention)',
       q: 'Do you train AI models on our proprietary ledger and forecast data?',
     },
     {
-      label: '3. Vendor Lock-In',
+      label: '3. VENDOR LOCK-IN (Open Standard Export)',
       q: 'What happens if we terminate? Can we export our commentary and data?',
     },
     {
@@ -500,17 +500,18 @@ export const TrustCopilot: React.FC = () => {
         </button>
       </form>
 
-      {/* 5-Step Structured Response Presentation */}
+      {/* 5-Step Structured Response Presentation (CFO-Friendly Narrative Architecture) */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
         {/* Response Meta Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
-          <div className="flex items-center gap-2">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 uppercase tracking-wider mb-1">
+              <ShieldCheck className="w-4 h-4" />
+              CFO-Friendly Narrative Architecture (5 Distinct Tiers)
+            </div>
             <h3 className="font-bold text-white text-base">
-              Structured 5-Step Defense
+              Audited Trust Response for "{selectedQuestion}"
             </h3>
-            <span className="text-xs text-slate-400">
-              ("{selectedQuestion}")
-            </span>
           </div>
 
           {/* Overclaim Guard Badge */}
@@ -549,68 +550,68 @@ export const TrustCopilot: React.FC = () => {
           </div>
         ) : response ? (
           <div className="space-y-4">
-            {/* Step 1: Acknowledge */}
-            <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-4">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                <span className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 text-[10px]">
+            {/* 1. THE CONCERN */}
+            <div className="bg-slate-950/90 border border-slate-800/90 rounded-xl p-4.5">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                <span className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-slate-200 text-[10px] font-mono font-bold">
                   1
                 </span>
-                Step 1: Acknowledge (Executive Empathy)
+                <span>THE CONCERN (Executive Empathy)</span>
               </div>
               <p className="text-xs text-slate-200 leading-relaxed font-medium pl-7">
-                {response.step1_acknowledge}
+                {response.the_concern || response.step1_acknowledge}
               </p>
             </div>
 
-            {/* Step 2: Clarify */}
-            <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-4">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                <span className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 text-[10px]">
+            {/* 2. WHAT SOLVANT DOES */}
+            <div className="bg-emerald-950/20 border border-emerald-800/60 rounded-xl p-4.5">
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider mb-1.5">
+                <span className="w-5 h-5 rounded-full bg-emerald-900 flex items-center justify-center text-emerald-300 text-[10px] font-mono font-bold">
                   2
                 </span>
-                Step 2: Clarify (Define Technical Boundary)
-              </div>
-              <p className="text-xs text-slate-200 leading-relaxed font-medium pl-7">
-                {response.step2_clarify}
-              </p>
-            </div>
-
-            {/* Step 3: Evidence */}
-            <div className="bg-emerald-950/20 border border-emerald-800/60 rounded-xl p-4">
-              <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider mb-1">
-                <span className="w-5 h-5 rounded-full bg-emerald-900 flex items-center justify-center text-emerald-300 text-[10px]">
-                  3
-                </span>
-                Step 3: Evidence (Strictly From Fact Base)
+                <span>WHAT SOLVANT DOES (Technical Architecture)</span>
               </div>
               <p className="text-xs text-emerald-200/90 leading-relaxed font-medium pl-7">
-                {response.step3_evidence}
+                {response.what_solvant_does || response.step2_clarify}
               </p>
             </div>
 
-            {/* Step 4: Limit the Claim */}
-            <div className="bg-amber-950/20 border border-amber-800/60 rounded-xl p-4">
-              <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">
-                <span className="w-5 h-5 rounded-full bg-amber-900 flex items-center justify-center text-amber-300 text-[10px]">
-                  4
+            {/* 3. WHAT THE CUSTOMER CONTROLS */}
+            <div className="bg-indigo-950/20 border border-indigo-800/60 rounded-xl p-4.5">
+              <div className="flex items-center gap-2 text-xs font-bold text-indigo-400 uppercase tracking-wider mb-1.5">
+                <span className="w-5 h-5 rounded-full bg-indigo-900 flex items-center justify-center text-indigo-300 text-[10px] font-mono font-bold">
+                  3
                 </span>
-                Step 4: Limit the Claim (Honest Posture — No Overclaiming)
-              </div>
-              <p className="text-xs text-amber-200/90 leading-relaxed font-medium pl-7">
-                {response.step4_claim_limits}
-              </p>
-            </div>
-
-            {/* Step 5: Risk-Reduction Mechanism */}
-            <div className="bg-indigo-950/20 border border-indigo-800/60 rounded-xl p-4">
-              <div className="flex items-center gap-2 text-xs font-bold text-indigo-400 uppercase tracking-wider mb-1">
-                <span className="w-5 h-5 rounded-full bg-indigo-900 flex items-center justify-center text-indigo-300 text-[10px]">
-                  5
-                </span>
-                Step 5: Risk-Reduction Mechanism (Commercial & Data Gating)
+                <span>WHAT THE CUSTOMER CONTROLS (VPC & KMS Sovereignty)</span>
               </div>
               <p className="text-xs text-indigo-200/90 leading-relaxed font-medium pl-7">
-                {response.step5_risk_reduction}
+                {response.what_customer_controls || response.step3_evidence}
+              </p>
+            </div>
+
+            {/* 4. WHAT THE CUSTOMER CAN VERIFY */}
+            <div className="bg-cyan-950/20 border border-cyan-800/60 rounded-xl p-4.5">
+              <div className="flex items-center gap-2 text-xs font-bold text-cyan-400 uppercase tracking-wider mb-1.5">
+                <span className="w-5 h-5 rounded-full bg-cyan-900 flex items-center justify-center text-cyan-300 text-[10px] font-mono font-bold">
+                  4
+                </span>
+                <span>WHAT THE CUSTOMER CAN VERIFY (Audited Telemetry & Open Export)</span>
+              </div>
+              <p className="text-xs text-cyan-200/90 leading-relaxed font-medium pl-7">
+                {response.what_customer_can_verify || response.step5_risk_reduction}
+              </p>
+            </div>
+
+            {/* 5. WHAT SOLVANT DOES NOT CLAIM */}
+            <div className="bg-amber-950/20 border border-amber-800/60 rounded-xl p-4.5">
+              <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider mb-1.5">
+                <span className="w-5 h-5 rounded-full bg-amber-900 flex items-center justify-center text-amber-300 text-[10px] font-mono font-bold">
+                  5
+                </span>
+                <span>WHAT SOLVANT DOES NOT CLAIM (Honest Posture & Enforced Limits)</span>
+              </div>
+              <p className="text-xs text-amber-200/90 leading-relaxed font-medium pl-7">
+                {response.what_solvant_does_not_claim || response.step4_claim_limits}
               </p>
             </div>
 
@@ -618,8 +619,8 @@ export const TrustCopilot: React.FC = () => {
             <div className="mt-4 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
               <div className="flex items-center gap-2 text-slate-400">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>Verified Claims:</span>
-                <span className="text-slate-200">
+                <span>Verified Claims Grounded:</span>
+                <span className="text-slate-200 font-mono text-[11px]">
                   {response.overclaim_guard.verified_claims.join(' • ')}
                 </span>
               </div>
@@ -628,7 +629,7 @@ export const TrustCopilot: React.FC = () => {
                 <div className="flex items-center gap-2 text-amber-400">
                   <AlertTriangle className="w-4 h-4" />
                   <span>Enforced Boundary:</span>
-                  <span className="text-amber-200">
+                  <span className="text-amber-200 font-mono text-[11px]">
                     {response.overclaim_guard.unsupported_or_limited_claims.join(' • ')}
                   </span>
                 </div>

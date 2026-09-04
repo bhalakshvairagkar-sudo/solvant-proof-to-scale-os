@@ -29,6 +29,21 @@ from app.groq_service import (
 )
 from app.trust_copilot import get_fact_base
 from app.audit_chain import audit_ledger, AuditChainVerificationResponse, AuditEvent
+from app.gtm_architecture import (
+    GTM_CONNECTED_STAGES,
+    PROHIBITED_OSTRAVA_ACTIONS,
+    SOLVANT_EIGHT_PILLAR_RESPONSE,
+    CONTINGENCY_ONE_PAGER_STAGES,
+    evaluate_ostrava_decision,
+)
+from app.models import OstravaDecisionRequest, OstravaDecisionResponse
+from app.research_data import (
+    GTM_RESEARCH_INTELLIGENCE,
+    ADOPTION_GAP_MATRIX,
+    PRICING_BENCHMARK_TEARDOWN,
+    SOLVANT_STRATEGIC_SYNTHESIS,
+)
+from app.models import GTMResearchSuiteResponse
 from app.wedge_data import (
     WEDGE_COMPARISON_MATRIX,
     THREE_LAYER_MOAT,
@@ -150,6 +165,9 @@ def list_accounts(expansion_wau_threshold: float = 0.60):
             "intervention_reason": health_resp.intervention_reason,
             "estimated_arr": est_arr,
             "active_billable_users": active_billable,
+            "day_60_assessment": health_resp.day_60_assessment,
+            "root_cause": health_resp.root_cause,
+            "stakeholder_alignment_score": health_resp.stakeholder_alignment_score,
         })
     # Sort accounts: Expansion Ready first, then Watch, then At Risk
     band_order = {"Expansion Ready": 0, "Healthy but Watch": 1, "At Risk": 2}
@@ -178,6 +196,9 @@ def get_account_detail(account_id: str, expansion_wau_threshold: float = 0.60):
         "pilot_thresholds_met": health_resp.pilot_thresholds_met,
         "estimated_arr": est_arr,
         "active_billable_users": active_billable,
+        "day_60_assessment": health_resp.day_60_assessment,
+        "root_cause": health_resp.root_cause,
+        "stakeholder_alignment_score": health_resp.stakeholder_alignment_score,
     }
 
 
@@ -226,32 +247,40 @@ def build_adoption_workstream(account: Account) -> AdoptionWorkstream:
     health_resp = evaluate_account_health(account)
     h = health_resp.health
     e = health_resp.expansion
+    stall = health_resp.day_60_assessment
+    cause = health_resp.root_cause
     
-    # Phase 1: Days 0–30: Pilot Foundation
+    # Phase 1: Days 0–30: ACTIVATION (Goal: Users experience first value quickly)
     p1_status = "COMPLETED" if days >= 30 else "IN_PROGRESS"
     p1_objectives = [
         AdoptionObjective(
-            objective="Invite & activate finance pilot cohort (50 target seats)",
-            target=">= 70% activation (35 users)",
+            objective="First workflow completion & general ledger sync",
+            target="stateless VPC endpoint live, first variance generated",
+            current_value="Stateless AWS KMS + VPC Endpoint live; first variance logged",
+            met=True,
+        ),
+        AdoptionObjective(
+            objective="First successful task & active user onboarding",
+            target=">= 70% activation (35+ users)",
             current_value=f"{account.activated_users}/{account.invited_users} ({int(round((account.activated_users/account.invited_users)*100))}%)",
             met=(account.activated_users / account.invited_users) >= 0.70,
         ),
         AdoptionObjective(
-            objective="Connect general ledger & variance data sources",
-            target="stateless VPC endpoint with zero egress",
-            current_value="Customer AWS KMS + VPC Endpoint live",
-            met=True,
+            objective="End-user champion & executive sponsor identified",
+            target="5 core stakeholder roles identified",
+            current_value=f"{len([s for s in account.stakeholders if s.identified])}/5 roles confirmed ({int(account.stakeholder_alignment_score)}% alignment)",
+            met=account.stakeholder_alignment_score >= 60.0,
         ),
         AdoptionObjective(
-            objective="Establish variance analysis weekly cadence",
-            target=">= 500 verified outputs / month",
-            current_value=f"{account.monthly_verified_outputs} outputs",
-            met=account.monthly_verified_outputs >= 500,
+            objective="First measurable value delivered",
+            target=">= 4 hours saved on initial close cycle",
+            current_value=f"{(account.workflow_time_reduction_pct * 100):.1f}% time saved; {account.monthly_verified_outputs} outputs",
+            met=account.workflow_time_reduction_pct >= 0.15,
         ),
     ]
     p1_exit_met = all(o.met for o in p1_objectives)
     
-    # Phase 2: Days 31–60: Value Proving
+    # Phase 2: Days 31–60: HABIT (Goal: Usage becomes habitual)
     if days < 30:
         p2_status = "UPCOMING"
     elif days < 60:
@@ -259,29 +288,36 @@ def build_adoption_workstream(account: Account) -> AdoptionWorkstream:
     else:
         p2_status = "COMPLETED"
         
+    current_wau_pct = int(round((account.weekly_active_users / account.activated_users) * 100))
     p2_objectives = [
         AdoptionObjective(
-            objective="Maintain weekly active usage across finance team",
+            objective="Weekly active usage rate (WAU)",
             target=">= 60% WAU for 4 consecutive weeks",
-            current_value=f"{int(round((account.weekly_active_users/account.activated_users)*100))}% current WAU ({'Met' if e.consecutive_wau_met else 'Unmet'})",
+            current_value=f"{current_wau_pct}% current WAU ({'Met' if e.consecutive_wau_met else 'Unmet'})",
             met=e.consecutive_wau_met,
         ),
         AdoptionObjective(
-            objective="Achieve measurable finance workflow time reduction",
-            target=">= 20% variance cycle reduction",
-            current_value=f"{int(round(account.workflow_time_reduction_pct * 100))}% measured reduction",
-            met=e.time_reduction_met,
-        ),
-        AdoptionObjective(
-            objective="Maintain user cohort retention",
+            objective="Repeat usage & cohort retention",
             target=">= 70% 30-day active retention",
             current_value=f"{int(round((account.retained_30d_users/account.activated_users)*100))}% retained",
             met=e.retention_met,
         ),
+        AdoptionObjective(
+            objective="Workflow completion rate",
+            target=">= 75% tasks completed through export",
+            current_value=f"{int(round(account.workflow_completion_rate * 100))}% completed",
+            met=account.workflow_completion_rate >= 0.75,
+        ),
+        AdoptionObjective(
+            objective="Usage trend slope",
+            target="Positive or flat slope over 4-week window",
+            current_value=f"{h.trend_direction} ({h.trend_slope:.3f}/wk)",
+            met=h.trend_slope >= -0.015,
+        ),
     ]
     p2_exit_met = all(o.met for o in p2_objectives)
 
-    # Phase 3: Days 61–90: Expansion Scale
+    # Phase 3: Days 61–90: BUSINESS VALUE (Goal: Convert usage into customer-verifiable business value)
     if days < 60:
         p3_status = "UPCOMING"
     else:
@@ -290,58 +326,69 @@ def build_adoption_workstream(account: Account) -> AdoptionWorkstream:
     expanded_seats = int(account.activated_users * 3.5)
     p3_objectives = [
         AdoptionObjective(
-            objective=f"Expand rollout to corporate finance ({expanded_seats} provisioned seats)",
-            target="Usage-metered billing (pay ONLY for active WAUs)",
-            current_value=f"{expanded_seats} seats ready; {int(round(expanded_seats * 0.72))} billable active",
-            met=e.verdict == "EXPAND",
+            objective="Customer-verifiable ROI multiplier",
+            target=">= 2.0x realized return on pilot investment",
+            current_value=f"{account.roi_multiplier:.1f}x measured ROI",
+            met=account.roi_multiplier >= 2.0,
         ),
         AdoptionObjective(
-            objective="Deploy multi-entity variance reporting workflow",
-            target=">= 2,500 monthly workflow executions",
-            current_value="Automated FP&A variance pipeline active",
-            met=e.verdict == "EXPAND",
+            objective="Finance workflow time reduction",
+            target=">= 20% variance close cycle reduction",
+            current_value=f"{int(round(account.workflow_time_reduction_pct * 100))}% measured reduction",
+            met=e.time_reduction_met,
         ),
         AdoptionObjective(
-            objective="Maintain SLA compliance and quarterly CISO review",
-            target="100% hash-chained audit verification",
-            current_value="Audit chain verified tamper-evident",
-            met=True,
+            objective="Error & rework reduction",
+            target=">= 15% variance reporting error reduction",
+            current_value=f"{int(round(account.error_reduction_pct * 100))}% error reduction",
+            met=account.error_reduction_pct >= 0.15,
+        ),
+        AdoptionObjective(
+            objective=f"Enterprise expansion readiness ({expanded_seats} provisioned seats)",
+            target="Usage-metered active billing approved by CFO",
+            current_value=f"{int(round(expanded_seats * 0.72))} billable active users ready",
+            met=e.verdict == "EXPAND",
         ),
     ]
     p3_exit_met = e.verdict == "EXPAND"
 
     current_phase_label = (
-        "Phase 1: Pilot Foundation (Days 0–30)" if days <= 30
-        else ("Phase 2: Value Proving (Days 31–60)" if days <= 60
-              else "Phase 3: Expansion Scale (Days 61–90)")
+        "Phase 1: Activation (Days 0–30)" if days <= 30
+        else ("Phase 2: Habit (Days 31–60)" if days <= 60
+              else "Phase 3: Business Value (Days 61–90)")
     )
 
     phases = [
         AdoptionPhaseMilestone(
-            phase="Phase 1: Pilot Foundation",
+            phase="Phase 1: Activation",
             day_range="Days 0–30",
             status=p1_status,
             objectives=p1_objectives,
-            exit_gate="Activation SLA Gate (>=70% activated, secure VPC live)",
+            exit_gate="Activation SLA Gate (>=70% activated, secure VPC live, first value)",
             exit_gate_met=p1_exit_met,
         ),
         AdoptionPhaseMilestone(
-            phase="Phase 2: Value Proving",
+            phase="Phase 2: Habit",
             day_range="Days 31–60",
             status=p2_status,
             objectives=p2_objectives,
-            exit_gate="Expansion Eligibility Gate (60% WAU, 20% time saved, 70% retention)",
+            exit_gate="Habit Formation Gate (60% WAU 4wks, 75% completion, 70% retention)",
             exit_gate_met=p2_exit_met,
         ),
         AdoptionPhaseMilestone(
-            phase="Phase 3: Expansion Scale",
+            phase="Phase 3: Business Value",
             day_range="Days 61–90",
             status=p3_status,
             objectives=p3_objectives,
-            exit_gate="Enterprise Rollout Gate (Usage-metered active billing active)",
+            exit_gate="Business Value & Expansion Gate (>=20% time saved, >=2.0x ROI)",
             exit_gate_met=p3_exit_met,
         ),
     ]
+
+    remeasure_stage = (
+        "INTERVENTION_RE_MEASUREMENT" if health_resp.intervention_required
+        else ("EXPANSION_CLEARANCE" if e.verdict == "EXPAND" else "HABIT_MONITORING")
+    )
 
     return AdoptionWorkstream(
         account_id=account.id,
@@ -349,8 +396,11 @@ def build_adoption_workstream(account: Account) -> AdoptionWorkstream:
         pilot_days_elapsed=account.pilot_days_elapsed,
         current_phase=current_phase_label,
         phases=phases,
+        day_60_assessment=stall,
+        root_cause=cause,
+        remeasurement_stage=remeasure_stage,
+        stakeholders=account.stakeholders,
     )
-
 
 @app.get("/api/adoption-workstream/{account_id}", response_model=AdoptionWorkstream)
 def get_account_adoption_workstream(account_id: str):
@@ -386,7 +436,7 @@ def reset_audit_trail():
 def get_model_assumptions():
     return {
         "seat_billing_rule": "Billable Active Users = floor(expanded_seats * actual_wau_rate). Zero shelfware billing.",
-        "pilot_deposit": "$12,000 upfront deposit, 100% refundable if 6 verifiable value criteria fail",
+        "pilot_deposit": "$12,000 upfront deposit, Contractually refundable if 6 verifiable value criteria fail",
         "time_to_full_price_modes": [
             {"days": 30, "description": "1 month pilot, full pricing begins Month 2"},
             {"days": 60, "description": "2 month pilot, full pricing begins Month 3 (Default)"},
@@ -462,6 +512,54 @@ def get_adversarial_curveballs():
 def get_buyer_objections():
     return BUYER_OBJECTIONS
 
+
+
+@app.get("/api/research/full-suite", response_model=GTMResearchSuiteResponse)
+def get_research_full_suite():
+    return {
+        "gtm_intelligence": GTM_RESEARCH_INTELLIGENCE,
+        "adoption_gap_matrix": ADOPTION_GAP_MATRIX,
+        "pricing_benchmark": PRICING_BENCHMARK_TEARDOWN,
+        "synthesis": SOLVANT_STRATEGIC_SYNTHESIS,
+    }
+
+
+@app.get("/api/research/gtm-intelligence")
+def get_gtm_intelligence():
+    return GTM_RESEARCH_INTELLIGENCE
+
+
+@app.get("/api/research/adoption-gap-matrix")
+def get_adoption_gap_matrix():
+    return ADOPTION_GAP_MATRIX
+
+
+@app.get("/api/research/pricing-benchmark")
+def get_pricing_benchmark():
+    return PRICING_BENCHMARK_TEARDOWN
+
+
+@app.get("/api/research/solvant-synthesis")
+def get_solvant_synthesis():
+    return SOLVANT_STRATEGIC_SYNTHESIS
+
+
+@app.get("/api/gtm-architecture")
+def get_gtm_architecture_data():
+    return {
+        "connected_stages": GTM_CONNECTED_STAGES,
+        "prohibited_actions": PROHIBITED_OSTRAVA_ACTIONS,
+        "defense_pillars": SOLVANT_EIGHT_PILLAR_RESPONSE,
+        "contingency_stages": CONTINGENCY_ONE_PAGER_STAGES,
+    }
+
+
+@app.post("/api/gtm-architecture/ostrava-decision", response_model=OstravaDecisionResponse)
+def run_ostrava_decision(req: OstravaDecisionRequest):
+    return evaluate_ostrava_decision(
+        materially_differentiated=req.materially_differentiated,
+        alternative_pain_available=req.alternative_pain_available,
+    )
 
 # Static files mount and SPA catch-all for unified production deployment
 dist_candidates = [

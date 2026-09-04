@@ -10,6 +10,9 @@ import {
   AuditEvent,
   AuditChainVerificationResponse,
   AdoptionWorkstream,
+  GTMResearchSuiteResponse,
+  GTMArchitectureResponse,
+  OstravaDecisionResponse,
 } from './types';
 
 const API_BASE = '/api';
@@ -175,5 +178,52 @@ export async function fetchWedgeComparison(): Promise<any> {
 
 export async function fetchBuyerObjections(): Promise<any> {
   const res = await fetch(`${API_BASE}/buyer-objections`);
+  return res.json();
+}
+
+
+export async function fetchGTMResearchSuite(): Promise<GTMResearchSuiteResponse> {
+  const res = await fetch(`${API_BASE}/research/full-suite`);
+  return res.json();
+}
+
+export async function fetchGTMIntelligence(): Promise<any[]> {
+  const res = await fetch(`${API_BASE}/research/gtm-intelligence`);
+  return res.json();
+}
+
+export async function fetchAdoptionGapMatrix(): Promise<any[]> {
+  const res = await fetch(`${API_BASE}/research/adoption-gap-matrix`);
+  return res.json();
+}
+
+export async function fetchPricingBenchmark(): Promise<any[]> {
+  const res = await fetch(`${API_BASE}/research/pricing-benchmark`);
+  return res.json();
+}
+
+export async function fetchSolvantSynthesis(): Promise<any> {
+  const res = await fetch(`${API_BASE}/research/solvant-synthesis`);
+  return res.json();
+}
+
+
+export async function fetchGTMArchitecture(): Promise<GTMArchitectureResponse> {
+  const res = await fetch(`${API_BASE}/gtm-architecture`);
+  return res.json();
+}
+
+export async function runOstravaDecision(
+  materiallyDifferentiated: boolean = true,
+  alternativePainAvailable: boolean = true
+): Promise<OstravaDecisionResponse> {
+  const res = await fetch(`${API_BASE}/gtm-architecture/ostrava-decision`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      materially_differentiated: materiallyDifferentiated,
+      alternative_pain_available: alternativePainAvailable,
+    }),
+  });
   return res.json();
 }

@@ -15,6 +15,42 @@ class WeeklyLog(BaseModel):
     feedback_score: float
 
 
+class StakeholderRole(BaseModel):
+    role: str  # "Economic Buyer", "Executive Sponsor", "Workflow Owner", "IT/Security Owner", "End-User Champion"
+    name: str
+    title: str
+    identified: bool = True
+    notes: str = ""
+
+
+class InterventionHistoryItem(BaseModel):
+    day: int
+    date: str
+    event_type: str  # "MILESTONE", "STALL_DETECTED", "INTERVENTION_DISPATCHED", "RE_MEASUREMENT", "EXPANSION_CLEARED"
+    description: str
+    impact_summary: str = ""
+    status: str = "COMPLETED"
+
+
+class Day60StallAssessment(BaseModel):
+    status: str = "HEALTHY"  # "HEALTHY", "AT RISK", "STALLED"
+    is_stalled: bool = False
+    stall_risk_score: float = 20.0
+    failing_indicators: List[str] = Field(default_factory=list)
+    healthy_indicators: List[str] = Field(default_factory=list)
+    stall_reason: str = ""
+
+
+class RootCauseDiagnosis(BaseModel):
+    primary_cause: str = "Healthy Adoption Velocity"
+    category: str = "GTM-CONTROLLABLE"  # "GTM-CONTROLLABLE", "PARTIALLY CONTROLLABLE", "ORGANIZATIONAL / EXTERNAL"
+    controllability_score_pct: float = 90.0
+    contributing_factors: List[str] = Field(default_factory=list)
+    prescribed_intervention: str = ""
+    action_plan_steps: List[str] = Field(default_factory=list)
+    remeasurement_target: str = ""
+
+
 class Account(BaseModel):
     id: str
     name: str
@@ -37,6 +73,13 @@ class Account(BaseModel):
     buyer_title: str
     primary_workflow: str = "FP&A Variance Analysis & Management Reporting"
     recent_logs: List[WeeklyLog] = []
+    stakeholders: List[StakeholderRole] = Field(default_factory=list)
+    stakeholder_alignment_score: float = 80.0
+    roi_multiplier: float = 3.2
+    workflow_completion_rate: float = 0.90
+    error_reduction_pct: float = 0.20
+    day_60_status: str = "HEALTHY"
+    intervention_history: List[InterventionHistoryItem] = Field(default_factory=list)
 
 
 class HealthScoreBreakdown(BaseModel):
@@ -83,6 +126,12 @@ class ExpansionCriteriaStatus(BaseModel):
     passed_conditions: List[str] = []
     trigger_status: Dict[str, bool] = {}
     decision_reason: str = ""
+    roi_multiplier_met: bool = True
+    roi_multiplier_value: float = 3.2
+    workflow_completion_met: bool = True
+    workflow_completion_value: float = 0.90
+    evidence_bullets: List[str] = Field(default_factory=list)
+    traceability_chain: Dict[str, Any] = Field(default_factory=dict)
 
 
 class AccountHealthResponse(BaseModel):
@@ -93,6 +142,9 @@ class AccountHealthResponse(BaseModel):
     intervention_required: bool
     intervention_reason: Optional[str] = None
     pilot_thresholds_met: Dict[str, bool]
+    day_60_assessment: Optional[Day60StallAssessment] = None
+    root_cause: Optional[RootCauseDiagnosis] = None
+    stakeholder_alignment_score: float = 80.0
 
 
 class AdoptionDoctorResponse(BaseModel):
@@ -292,6 +344,11 @@ class TrustCopilotResponse(BaseModel):
     step3_evidence: str
     step4_claim_limits: str
     step5_risk_reduction: str
+    the_concern: str = ""
+    what_solvant_does: str = ""
+    what_customer_controls: str = ""
+    what_customer_can_verify: str = ""
+    what_solvant_does_not_claim: str = ""
     claims: List[TrustClaimRef] = []
     overclaim_guard: OverclaimGuard
     audit_event_id: Optional[str] = None
@@ -335,4 +392,63 @@ class AdoptionWorkstream(BaseModel):
     pilot_days_elapsed: int
     current_phase: str
     phases: List[AdoptionPhaseMilestone]
+    day_60_assessment: Optional[Day60StallAssessment] = None
+    root_cause: Optional[RootCauseDiagnosis] = None
+    remeasurement_stage: str = "ACTIVE_MONITORING"
+    stakeholders: List[StakeholderRole] = Field(default_factory=list)
 
+
+
+class GTMResearchItem(BaseModel):
+    company: str
+    ticker: str
+    market_position: str
+    land_motion: str
+    expansion_motion: str
+    pricing_model: str
+    ai_mechanism: str
+    why_it_works: str
+    transferable_lesson: str
+    non_transferable_lesson: str
+    why_not_transferable: str
+
+
+class AdoptionGapItem(BaseModel):
+    root_cause: str
+    can_gtm_fix: str  # "YES", "PARTIAL", "NO"
+    how_solvant_remediates: str
+    doctor_connection: str
+
+
+class PricingBenchmarkItem(BaseModel):
+    company: str
+    pricing_mechanism: str
+    list_price: str
+    seat_based: str
+    usage_based: str
+    ai_specific_meter: str
+    expansion_mechanism: str
+    solvant_lesson: str
+    source: str
+
+
+class GTMResearchSuiteResponse(BaseModel):
+    gtm_intelligence: List[GTMResearchItem]
+    adoption_gap_matrix: List[AdoptionGapItem]
+    pricing_benchmark: List[PricingBenchmarkItem]
+    synthesis: Dict[str, Any]
+
+
+class OstravaDecisionRequest(BaseModel):
+    materially_differentiated: bool = True
+    alternative_pain_available: bool = True
+
+
+class OstravaDecisionResponse(BaseModel):
+    verdict: str  # "DEFEND_AND_EXPAND", "MOVE_WEDGE", "STOP_AND_REASSESS"
+    headline: str
+    action_plan: List[str]
+    defense_pillars: List[str]
+    prohibited_actions: List[str]
+    contingency_stage: str
+    core_message: str = "Features can be copied. Verified adoption and customer-specific outcome history compound."

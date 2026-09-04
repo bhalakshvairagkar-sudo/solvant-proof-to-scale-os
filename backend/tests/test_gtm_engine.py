@@ -138,3 +138,129 @@ def test_expansion_criteria_customer_verifiable():
     assert crit_unmet.time_reduction_met is False
     assert crit_unmet.all_met is False
     assert crit_unmet.verdict == "HOLD"
+
+
+def test_case_scenario_1_healthy_account_expands():
+    from app.seed_data import get_seed_accounts
+    accounts = get_seed_accounts()
+    acme = next(a for a in accounts if a.id == "acct_acme_corp")
+    
+    res = evaluate_account_health(acme)
+    assert res.expansion.verdict == "EXPAND"
+    assert res.day_60_assessment.status == "HEALTHY"
+    assert res.day_60_assessment.is_stalled is False
+    assert res.root_cause.primary_cause == "Healthy Adoption Velocity"
+    assert res.root_cause.category == "GTM-CONTROLLABLE"
+    assert len(res.expansion.evidence_bullets) >= 5
+    assert "WAU =" in res.expansion.evidence_bullets[0]
+    assert "ROI =" in res.expansion.evidence_bullets[4]
+
+
+def test_case_scenario_2_declining_wau_triggers_intervention():
+    from app.models import Account
+    acct = Account(
+        id="test_declining",
+        name="Declining Corp",
+        industry="Retail",
+        tier="Enterprise",
+        pilot_start_date="2026-07-01",
+        pilot_days_elapsed=46,
+        invited_users=50,
+        activated_users=45,
+        weekly_active_users=18,
+        retained_30d_users=25,
+        workflow_time_reduction_pct=0.18,
+        monthly_verified_outputs=300,
+        satisfaction_score=3.9,
+        workflow_runs_monthly=2000,
+        weekly_wau_history=[0.75, 0.65, 0.50, 0.38],  # steep negative slope
+        stage="Pilot Active",
+        champion_name="Bob",
+        champion_title="Lead",
+        buyer_title="VP",
+        roi_multiplier=1.6,
+        workflow_completion_rate=0.62,
+    )
+    res = evaluate_account_health(acct)
+    assert res.expansion.verdict in ["INTERVENE", "HOLD"]
+    assert res.health.trend_direction == "negative"
+    assert res.day_60_assessment.status in ["STALLED", "AT RISK"]
+    assert res.root_cause.category in ["GTM-CONTROLLABLE", "PARTIALLY CONTROLLABLE", "ORGANIZATIONAL / EXTERNAL"]
+
+
+def test_case_scenario_3_day_60_stalled_account_diagnosed():
+    from app.seed_data import get_seed_accounts
+    accounts = get_seed_accounts()
+    apex = next(a for a in accounts if a.id == "acct_apex_global")
+    
+    res = evaluate_account_health(apex)
+    assert res.day_60_assessment.status == "STALLED"
+    assert res.day_60_assessment.is_stalled is True
+    assert res.intervention_required is True
+    assert res.root_cause.primary_cause in ["Poor Workflow Fit", "Business Priority Change", "Lack of Training"]
+    assert len(res.root_cause.action_plan_steps) >= 2
+    assert "Workflow Redesign" in res.root_cause.prescribed_intervention or len(res.root_cause.prescribed_intervention) > 0
+
+
+def test_case_scenario_4_low_roi_does_not_expand():
+    from app.models import Account
+    # Account with passing WAU and time reduction, but low ROI (1.4x < 2.0x target)
+    acct = Account(
+        id="test_low_roi",
+        name="Low ROI Corp",
+        industry="Tech",
+        tier="Enterprise",
+        pilot_start_date="2026-07-01",
+        pilot_days_elapsed=55,
+        invited_users=50,
+        activated_users=45,
+        weekly_active_users=38,  # 84% WAU
+        retained_30d_users=40,   # 88% retention
+        workflow_time_reduction_pct=0.25, # 25% time saved
+        monthly_verified_outputs=600,
+        satisfaction_score=4.5,
+        workflow_runs_monthly=5000,
+        weekly_wau_history=[0.70, 0.75, 0.80, 0.84],
+        stage="Pilot Active",
+        champion_name="Carol",
+        champion_title="Director",
+        buyer_title="CFO",
+        roi_multiplier=1.4,  # fails 2.0x hurdle!
+        workflow_completion_rate=0.90,
+    )
+    res = evaluate_account_health(acct)
+    assert res.expansion.roi_multiplier_met is False
+    assert res.expansion.verdict != "EXPAND"
+    assert any("ROI" in f for f in res.expansion.failed_conditions)
+
+
+def test_case_scenario_5_high_usage_weak_outcome_does_not_blindly_expand():
+    from app.models import Account
+    # Account with very high WAU (90%) but failing outcome (only 12% time reduction < 20%)
+    acct = Account(
+        id="test_high_usage_weak_outcome",
+        name="Busywork Corp",
+        industry="Tech",
+        tier="Enterprise",
+        pilot_start_date="2026-07-01",
+        pilot_days_elapsed=55,
+        invited_users=50,
+        activated_users=45,
+        weekly_active_users=42,  # 93% WAU
+        retained_30d_users=40,
+        workflow_time_reduction_pct=0.12,  # fails 20% hurdle!
+        monthly_verified_outputs=550,
+        satisfaction_score=4.4,
+        workflow_runs_monthly=5000,
+        weekly_wau_history=[0.85, 0.88, 0.90, 0.93],
+        stage="Pilot Active",
+        champion_name="Dan",
+        champion_title="Director",
+        buyer_title="CFO",
+        roi_multiplier=2.5,
+        workflow_completion_rate=0.88,
+    )
+    res = evaluate_account_health(acct)
+    assert res.expansion.time_reduction_met is False
+    assert res.expansion.verdict != "EXPAND"
+    assert any("Workflow time reduction" in f for f in res.expansion.failed_conditions)
