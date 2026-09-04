@@ -114,6 +114,53 @@ export interface AdoptionDoctorResponse {
   model_used: string;
 }
 
+export interface PilotUnitEconomics {
+  revenue: number;
+  delivery_cost: number;
+  ai_inference_cost: number;
+  customer_success_cost: number;
+  cloud_hosting_cost: number;
+  other_delivery_cost: number;
+  contribution: number;
+  margin_pct: number;
+  is_profitable: boolean;
+  status_label: string;
+}
+
+export interface CohortNRRBreakdown {
+  starting_mrr: number;
+  expansion_mrr: number;
+  contraction_mrr: number;
+  churn_mrr: number;
+  ending_mrr: number;
+  net_change_mrr: number;
+  nrr_pct: number;
+  grr_pct: number;
+  excludes_new_logos: boolean;
+  formula_definition: string;
+}
+
+export interface ChurnRiskAssessment {
+  risk_level: 'LOW' | 'MEDIUM' | 'HIGH' | string;
+  risk_score: number;
+  annualized_churn_pct: number;
+  churned_customers_12m: number;
+  churned_customers_24m: number;
+  revenue_lost_to_churn_12m: number;
+  revenue_lost_to_churn_24m: number;
+  key_drivers: string[];
+}
+
+export interface TimeToFullPriceComparisonPoint {
+  horizon_months: number;
+  revenue_12m: number;
+  revenue_24m: number;
+  gross_margin_pct: number;
+  full_price_start_month: number;
+  active_customers_12m: number;
+  active_customers_24m: number;
+}
+
 export interface PerAccountPricingBreakdown {
   licensed_users: number;
   activated_users: number;
@@ -129,20 +176,25 @@ export interface PerAccountPricingBreakdown {
 
 export interface PricingSimulationInput {
   pilot_price: number;
+  pilot_duration_months?: number;
   pilot_users: number;
   expansion_wau_threshold: number;
   usage_credit_rate: number;
-  full_price_per_user: number;
+  workflow_run_allowance: number;
+  time_to_full_price_months?: number;
+  expansion_seat_multiplier: number;
   pilot_to_expansion_conversion_pct: number;
   monthly_churn_pct: number;
+  ai_cost_per_run?: number;
+  cs_cost_per_customer_month?: number;
+  cloud_cost_per_customer_month?: number;
+  other_delivery_cost_per_customer_month?: number;
+  full_price_per_user: number;
   gross_margin_pct: number;
   new_pilots_per_month: number;
   workflow_runs_per_user_month: number;
-  workflow_run_allowance: number;
-  expansion_seat_multiplier: number;
   time_to_full_price_days?: number;
   pilot_duration_days?: number;
-  ai_cost_per_run?: number;
 }
 
 export interface MonthlyProjection {
@@ -152,6 +204,7 @@ export interface MonthlyProjection {
   billable_active_users?: number;
   licensed_seats?: number;
   pilot_revenue?: number;
+  transition_revenue?: number;
   expansion_base_revenue?: number;
   usage_overage_revenue?: number;
   base_mrr: number;
@@ -159,7 +212,9 @@ export interface MonthlyProjection {
   total_mrr: number;
   total_arr: number;
   dynamic_ai_cost?: number;
+  total_delivery_cost_mrr?: number;
   gross_profit_mrr: number;
+  cumulative_revenue?: number;
   cumulative_gross_profit: number;
 }
 
@@ -175,13 +230,21 @@ export interface NorthBridgeShadowPoint {
 export interface PricingSimulationOutput {
   arr_12m: number;
   arr_24m: number;
+  revenue_12m?: number;
+  revenue_24m?: number;
+  pilot_revenue_total_12m?: number;
+  expansion_revenue_total_12m?: number;
+  usage_revenue_total_12m?: number;
+  revenue_growth_y2_vs_y1?: number;
   active_seats_12m: number;
   active_seats_24m: number;
   active_customers_12m: number;
   active_customers_24m: number;
   gross_profit_12m: number;
   gross_profit_24m: number;
+  gross_margin_pct?: number;
   nrr_pct: number;
+  grr_pct?: number;
   nrr_label?: string;
   nrr_explanation?: string;
   cohort_nrr_proxy_pct?: number;
@@ -194,6 +257,13 @@ export interface PricingSimulationOutput {
   months_at_full_price_24m?: number;
   total_ai_infrastructure_cost_12m?: number;
   total_ai_infrastructure_cost_24m?: number;
+  total_delivery_cost_12m?: number;
+  total_delivery_cost_24m?: number;
+  pilot_economics?: PilotUnitEconomics;
+  cohort_nrr?: CohortNRRBreakdown;
+  churn_risk?: ChurnRiskAssessment;
+  time_to_full_price_comparison?: TimeToFullPriceComparisonPoint[];
+  causal_change_explanation?: string;
   per_account_sample?: PerAccountPricingBreakdown;
   monthly_projections: MonthlyProjection[];
   northbridge_shadow: NorthBridgeShadowPoint[];

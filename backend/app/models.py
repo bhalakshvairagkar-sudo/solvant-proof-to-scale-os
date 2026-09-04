@@ -105,6 +105,53 @@ class AdoptionDoctorResponse(BaseModel):
     model_used: str = "verified-baseline-cache"
 
 
+class PilotUnitEconomics(BaseModel):
+    revenue: float = 12000.0
+    delivery_cost: float = 2276.0
+    ai_inference_cost: float = 112.0
+    customer_success_cost: float = 1050.0
+    cloud_hosting_cost: float = 450.0
+    other_delivery_cost: float = 300.0
+    contribution: float = 9724.0
+    margin_pct: float = 81.0
+    is_profitable: bool = True
+    status_label: str = "PROFITABLE"
+
+
+class CohortNRRBreakdown(BaseModel):
+    starting_mrr: float = 3780.0
+    expansion_mrr: float = 2016.0
+    contraction_mrr: float = 151.2
+    churn_mrr: float = 627.5
+    ending_mrr: float = 5017.3
+    net_change_mrr: float = 1237.3
+    nrr_pct: float = 132.7
+    grr_pct: float = 79.4
+    excludes_new_logos: bool = True
+    formula_definition: str = "NRR = (Starting MRR + Expansion - Contraction - Churn) / Starting MRR * 100"
+
+
+class ChurnRiskAssessment(BaseModel):
+    risk_level: str = "LOW"  # "LOW", "MEDIUM", "HIGH"
+    risk_score: float = 28.5  # 0 to 100
+    annualized_churn_pct: float = 16.6
+    churned_customers_12m: int = 4
+    churned_customers_24m: int = 15
+    revenue_lost_to_churn_12m: float = 23184.0
+    revenue_lost_to_churn_24m: float = 86940.0
+    key_drivers: List[str] = Field(default_factory=list)
+
+
+class TimeToFullPriceComparisonPoint(BaseModel):
+    horizon_months: int
+    revenue_12m: float
+    revenue_24m: float
+    gross_margin_pct: float
+    full_price_start_month: int
+    active_customers_12m: int
+    active_customers_24m: int
+
+
 class PerAccountPricingBreakdown(BaseModel):
     licensed_users: int = 175
     activated_users: int = 160
@@ -120,20 +167,25 @@ class PerAccountPricingBreakdown(BaseModel):
 
 class PricingSimulationInput(BaseModel):
     pilot_price: float = 12000.0
+    pilot_duration_months: int = 2
     pilot_users: int = 50
     expansion_wau_threshold: float = 0.60
     usage_credit_rate: float = 0.40
-    full_price_per_user: float = 30.0
+    workflow_run_allowance: int = 100
+    time_to_full_price_months: int = 6
+    expansion_seat_multiplier: float = 3.5  # average expansion lands ~175 seats from 50 pilot seats
     pilot_to_expansion_conversion_pct: float = 65.0
     monthly_churn_pct: float = 1.5
+    ai_cost_per_run: float = 0.008  # Illustrative AI infrastructure cost assumption: Groq LLaMA 3.3 70B inference
+    cs_cost_per_customer_month: float = 350.0
+    cloud_cost_per_customer_month: float = 150.0
+    other_delivery_cost_per_customer_month: float = 100.0
+    full_price_per_user: float = 30.0
     gross_margin_pct: float = 76.5
     new_pilots_per_month: int = 6
     workflow_runs_per_user_month: int = 140
-    workflow_run_allowance: int = 100
-    expansion_seat_multiplier: float = 3.5  # average expansion lands ~175 seats from 50 pilot seats
-    time_to_full_price_days: int = 60  # [30, 60, 90] days
+    time_to_full_price_days: int = 60  # Backwards compatibility: [30, 60, 90] days
     pilot_duration_days: int = 60
-    ai_cost_per_run: float = 0.008  # Illustrative AI infrastructure cost assumption: Groq LLaMA 3.3 70B inference
 
 
 class MonthlyProjection(BaseModel):
@@ -143,6 +195,7 @@ class MonthlyProjection(BaseModel):
     billable_active_users: int = 0
     licensed_seats: int = 0
     pilot_revenue: float = 0.0
+    transition_revenue: float = 0.0
     expansion_base_revenue: float = 0.0
     usage_overage_revenue: float = 0.0
     base_mrr: float
@@ -150,7 +203,9 @@ class MonthlyProjection(BaseModel):
     total_mrr: float
     total_arr: float
     dynamic_ai_cost: float = 0.0
+    total_delivery_cost_mrr: float = 0.0
     gross_profit_mrr: float
+    cumulative_revenue: float = 0.0
     cumulative_gross_profit: float
 
 
@@ -166,15 +221,23 @@ class NorthBridgeShadowPoint(BaseModel):
 class PricingSimulationOutput(BaseModel):
     arr_12m: float
     arr_24m: float
+    revenue_12m: float = 0.0
+    revenue_24m: float = 0.0
+    pilot_revenue_total_12m: float = 0.0
+    expansion_revenue_total_12m: float = 0.0
+    usage_revenue_total_12m: float = 0.0
+    revenue_growth_y2_vs_y1: float = 0.0
     active_seats_12m: int
     active_seats_24m: int
     active_customers_12m: int
     active_customers_24m: int
     gross_profit_12m: float
     gross_profit_24m: float
+    gross_margin_pct: float = 76.5
     nrr_pct: float
-    nrr_label: str = "Projected NRR Proxy"
-    nrr_explanation: str = "Simplified hackathon projection based on expansion, contraction and churn assumptions. Not an audited SaaS NRR calculation."
+    grr_pct: float = 82.0
+    nrr_label: str = "Cohort-Based Net Revenue Retention (NRR)"
+    nrr_explanation: str = "Pure cohort-based NRR excluding new logo revenue: (Starting MRR + Expansion - Contraction - Churn) / Starting MRR * 100."
     cohort_nrr_proxy_pct: float = 138.0
     effective_conversion_pct: float
     actual_wau_rate_applied: float
@@ -185,6 +248,13 @@ class PricingSimulationOutput(BaseModel):
     months_at_full_price_24m: int = 22
     total_ai_infrastructure_cost_12m: float = 0.0
     total_ai_infrastructure_cost_24m: float = 0.0
+    total_delivery_cost_12m: float = 0.0
+    total_delivery_cost_24m: float = 0.0
+    pilot_economics: PilotUnitEconomics = Field(default_factory=PilotUnitEconomics)
+    cohort_nrr: CohortNRRBreakdown = Field(default_factory=CohortNRRBreakdown)
+    churn_risk: ChurnRiskAssessment = Field(default_factory=ChurnRiskAssessment)
+    time_to_full_price_comparison: List[TimeToFullPriceComparisonPoint] = Field(default_factory=list)
+    causal_change_explanation: str = ""
     per_account_sample: PerAccountPricingBreakdown = Field(default_factory=PerAccountPricingBreakdown)
     monthly_projections: List[MonthlyProjection]
     northbridge_shadow: List[NorthBridgeShadowPoint]

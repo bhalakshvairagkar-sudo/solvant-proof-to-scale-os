@@ -97,3 +97,78 @@ def test_trust_fact_base_evidence_sources():
         assert fact.evidence_source is not None
         assert len(fact.evidence_source.strip()) > 10
 
+
+
+def test_pilot_unit_economics_profitable_and_loss_making():
+    # 1. Profitable baseline pilot ($12,000 price)
+    res_profitable = run_pricing_simulation(PricingSimulationInput(pilot_price=12000.0, cs_cost_per_customer_month=350.0))
+    pe = res_profitable.pilot_economics
+    assert pe.revenue == 12000.0
+    assert pe.delivery_cost > 0
+    assert pe.contribution > 0
+    assert pe.margin_pct > 0
+    assert pe.is_profitable is True
+    assert pe.status_label == "PROFITABLE"
+
+    # 2. Loss-making pilot ($1,000 price with $2,000+ delivery cost)
+    res_loss = run_pricing_simulation(PricingSimulationInput(pilot_price=1000.0, cs_cost_per_customer_month=1000.0))
+    pe_loss = res_loss.pilot_economics
+    assert pe_loss.revenue == 1000.0
+    assert pe_loss.contribution < 0
+    assert pe_loss.margin_pct < 0
+    assert pe_loss.is_profitable is False
+    assert pe_loss.status_label == "LOSS-MAKING"
+
+
+def test_cohort_nrr_and_grr_formulas():
+    res = run_pricing_simulation(PricingSimulationInput())
+    cn = res.cohort_nrr
+    assert cn.excludes_new_logos is True
+    assert cn.starting_mrr > 0
+    assert cn.expansion_mrr > 0
+    assert cn.contraction_mrr >= 0
+    assert cn.churn_mrr >= 0
+    expected_ending = round(cn.starting_mrr + cn.expansion_mrr - cn.contraction_mrr - cn.churn_mrr, 2)
+    assert abs(cn.ending_mrr - expected_ending) <= 0.05
+    expected_nrr = round((cn.ending_mrr / cn.starting_mrr) * 100.0, 1)
+    assert abs(cn.nrr_pct - expected_nrr) <= 0.2
+    assert cn.grr_pct <= 100.0
+
+
+def test_deterministic_churn_risk_levels():
+    # Low churn scenario
+    res_low = run_pricing_simulation(PricingSimulationInput(monthly_churn_pct=0.5, cs_cost_per_customer_month=400.0))
+    assert res_low.churn_risk.risk_level in ["LOW", "MEDIUM"]
+    assert len(res_low.churn_risk.key_drivers) >= 3
+
+    # High churn scenario
+    res_high = run_pricing_simulation(PricingSimulationInput(monthly_churn_pct=4.5, cs_cost_per_customer_month=150.0))
+    assert res_high.churn_risk.risk_score > res_low.churn_risk.risk_score
+    assert res_high.churn_risk.revenue_lost_to_churn_24m > res_low.churn_risk.revenue_lost_to_churn_24m
+
+
+def test_time_to_full_price_comparison_matrix():
+    res = run_pricing_simulation(PricingSimulationInput())
+    comp = res.time_to_full_price_comparison
+    assert len(comp) == 4
+    horizons = [c.horizon_months for c in comp]
+    assert horizons == [3, 6, 9, 12]
+    # 3m horizon yields faster full price than 12m horizon
+    c3 = next(c for c in comp if c.horizon_months == 3)
+    c12 = next(c for c in comp if c.horizon_months == 12)
+    assert c3.revenue_12m > c12.revenue_12m
+
+
+def test_pricing_engine_handles_zero_and_extreme_inputs():
+    # Zero users, zero price, zero conversion
+    extreme_params = PricingSimulationInput(
+        pilot_users=0,
+        pilot_price=0.0,
+        pilot_to_expansion_conversion_pct=0.0,
+        monthly_churn_pct=0.0,
+        workflow_runs_per_user_month=0,
+    )
+    res = run_pricing_simulation(extreme_params)
+    assert res.arr_12m >= 0
+    assert res.pilot_economics.contribution <= 0
+    assert res.cohort_nrr.nrr_pct >= 0

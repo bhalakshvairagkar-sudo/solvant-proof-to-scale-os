@@ -12,10 +12,12 @@ import {
   Layers,
   ArrowRight,
   CheckCircle2,
+  AlertTriangle,
   Clock,
   ChevronDown,
   ChevronUp,
   Cpu,
+  HelpCircle,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -40,27 +42,33 @@ export const PricingSimulator: React.FC = () => {
   const [competitorTeardowns, setCompetitorTeardowns] = useState<any[]>([]);
   const [params, setParams] = useState<PricingSimulationInput>({
     pilot_price: 12000,
+    pilot_duration_months: 2,
     pilot_users: 50,
     expansion_wau_threshold: 0.60,
     usage_credit_rate: 0.40,
-    full_price_per_user: 30,
+    workflow_run_allowance: 100,
+    time_to_full_price_months: 6,
+    expansion_seat_multiplier: 3.5,
     pilot_to_expansion_conversion_pct: 65,
     monthly_churn_pct: 1.5,
+    ai_cost_per_run: 0.0080,
+    cs_cost_per_customer_month: 350,
+    cloud_cost_per_customer_month: 150,
+    other_delivery_cost_per_customer_month: 100,
+    full_price_per_user: 30,
     gross_margin_pct: 76.5,
     new_pilots_per_month: 6,
     workflow_runs_per_user_month: 140,
-    workflow_run_allowance: 100,
-    expansion_seat_multiplier: 3.5,
     time_to_full_price_days: 60,
+    pilot_duration_days: 60,
   });
-  const [showAssumptions, setShowAssumptions] = useState(false);
-  const [showSimplifications, setShowSimplifications] = useState(false);
 
   const [output, setOutput] = useState<PricingSimulationOutput | null>(null);
   const [showNorthBridgeShadow, setShowNorthBridgeShadow] = useState(true);
   const [strategistLoading, setStrategistLoading] = useState(false);
   const [strategistResponse, setStrategistResponse] = useState<PricingStrategistResponse | null>(null);
   const [showCostStackModal, setShowCostStackModal] = useState(false);
+  const [lastChangedField, setLastChangedField] = useState<string | null>(null);
 
   useEffect(() => {
     runModel(params);
@@ -71,7 +79,6 @@ export const PricingSimulator: React.FC = () => {
     try {
       const res = await runPricingSimulation(currentParams);
       setOutput(res);
-      // Fetch strategist explanation
       loadStrategistExplanation(res);
     } catch (err) {
       console.error(err);
@@ -91,11 +98,20 @@ export const PricingSimulator: React.FC = () => {
   };
 
   const handleSliderChange = (field: keyof PricingSimulationInput, value: number) => {
-    setParams((prev) => ({ ...prev, [field]: value }));
+    setLastChangedField(String(field));
+    setParams((prev) => {
+      const updated = { ...prev, [field]: value };
+      if (field === 'time_to_full_price_months') {
+        updated.time_to_full_price_days = value <= 3 ? 30 : (value <= 6 ? 60 : (value <= 9 ? 90 : 120));
+      } else if (field === 'time_to_full_price_days') {
+        updated.time_to_full_price_months = value <= 30 ? 3 : (value <= 60 ? 6 : (value <= 90 ? 9 : 12));
+      }
+      return updated;
+    });
   };
 
   const handleSimulateAcmeSlump = () => {
-    // Demonstrates live demo step 3: simulated adoption drop causes conversion to drop from 65% to 45%
+    setLastChangedField('Acme Adoption Slump Simulation');
     setParams((prev) => ({
       ...prev,
       pilot_to_expansion_conversion_pct: 45,
@@ -104,23 +120,31 @@ export const PricingSimulator: React.FC = () => {
   };
 
   const handleResetParams = () => {
+    setLastChangedField('Reset to Default Baseline');
     setParams({
       pilot_price: 12000,
+      pilot_duration_months: 2,
       pilot_users: 50,
       expansion_wau_threshold: 0.60,
       usage_credit_rate: 0.40,
-      full_price_per_user: 30,
+      workflow_run_allowance: 100,
+      time_to_full_price_months: 6,
+      expansion_seat_multiplier: 3.5,
       pilot_to_expansion_conversion_pct: 65,
       monthly_churn_pct: 1.5,
+      ai_cost_per_run: 0.0080,
+      cs_cost_per_customer_month: 350,
+      cloud_cost_per_customer_month: 150,
+      other_delivery_cost_per_customer_month: 100,
+      full_price_per_user: 30,
       gross_margin_pct: 76.5,
       new_pilots_per_month: 6,
       workflow_runs_per_user_month: 140,
-      workflow_run_allowance: 100,
-      expansion_seat_multiplier: 3.5,
+      time_to_full_price_days: 60,
+      pilot_duration_days: 60,
     });
   };
 
-  // Prepare chart series combining Solvant ARR and NorthBridge Shadow
   const chartData = output
     ? output.monthly_projections.map((p, idx) => {
         const nb = output.northbridge_shadow[idx];
@@ -144,13 +168,13 @@ export const PricingSimulator: React.FC = () => {
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-800/80 text-emerald-300 text-xs font-semibold mb-2">
               <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
-              Usage-Metered vs. Incumbent Shelfware Economics
+              Case Study 2: The Challenger's Wedge - Pricing & Revenue Simulator
             </div>
             <h2 className="text-2xl font-bold text-white tracking-tight">
-              24-Month Pricing & Financial Model
+              Enterprise AI Adoption, Unit Economics & Revenue Model
             </h2>
             <p className="text-sm text-slate-400 max-w-2xl mt-1">
-              Deterministic financial calculation. Pure backend code calculates ARR, gross profit, and NRR. Groq explains the strategic tradeoffs to CFO judges.
+              Deterministic calculations. Code calculates 12M/24M ARR, pilot contribution, cohort NRR, and churn risk. Groq explains strategic tradeoffs.
             </p>
           </div>
 
@@ -166,30 +190,56 @@ export const PricingSimulator: React.FC = () => {
               className="flex items-center gap-1 px-3 py-2 text-xs rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              <span>Reset</span>
+              <span>Reset Defaults</span>
             </button>
           </div>
         </div>
       </div>
 
+      {/* Dynamic Causal Change Banner ("Why did this change?") */}
+      {output && (
+        <div className="bg-indigo-950/40 border border-indigo-800/60 rounded-xl p-3.5 px-4 shadow-md flex items-start gap-3">
+          <div className="p-1 rounded bg-indigo-900/60 text-indigo-400 mt-0.5 shrink-0">
+            <HelpCircle className="w-4 h-4" />
+          </div>
+          <div className="text-xs space-y-0.5">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-indigo-300 uppercase tracking-wider text-[10px]">
+                Why Did This Change?
+              </span>
+              {lastChangedField && (
+                <span className="text-[10px] px-2 py-0.2 rounded bg-indigo-900 text-indigo-200 font-mono">
+                  Field: {lastChangedField}
+                </span>
+              )}
+            </div>
+            <p className="text-slate-300 leading-relaxed">
+              {output.causal_change_explanation}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Primary Financial Metric Cards */}
       {output && (
-        <>
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-          {/* 12M ARR */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* 12M ARR & Revenue */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
             <span className="text-[11px] text-slate-400 uppercase tracking-wider block mb-1">
-              12-Month ARR
+              12-Month Exit ARR / Rev
             </span>
             <div className="text-2xl font-black text-white font-mono">
               ${(output.arr_12m / 1000).toFixed(1)}k
             </div>
-            <span className="text-xs text-emerald-400 block mt-1">
+            <div className="text-[11px] text-slate-400 mt-0.5 font-mono">
+              12M Cum. Rev: <span className="text-emerald-400 font-bold">${((output.revenue_12m ?? 0) / 1000).toFixed(1)}k</span>
+            </div>
+            <span className="text-xs text-slate-500 block mt-1">
               {output.active_seats_12m} active seats • {output.active_customers_12m} accts
             </span>
           </div>
 
-          {/* 24M ARR */}
+          {/* 24M ARR & Revenue */}
           <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl p-5 shadow-lg bg-gradient-to-b from-emerald-950/20 to-slate-900">
             <span className="text-[11px] text-emerald-400 uppercase tracking-wider block mb-1">
               24-Month Active ARR
@@ -197,12 +247,15 @@ export const PricingSimulator: React.FC = () => {
             <div className="text-2xl font-black text-emerald-300 font-mono">
               ${(output.arr_24m / 1000000).toFixed(2)}M
             </div>
+            <div className="text-[11px] text-slate-300 mt-0.5 font-mono">
+              24M Cum. Rev: <span className="text-emerald-300 font-bold">${((output.revenue_24m ?? 0) / 1000000).toFixed(2)}M</span>
+            </div>
             <span className="text-xs text-slate-400 block mt-1">
               {output.active_seats_24m} billable active users • {output.active_customers_24m} accts
             </span>
           </div>
 
-          {/* Gross Margin & Profit */}
+          {/* 24M Gross Profit & Margin */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg relative group">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[11px] text-slate-400 uppercase tracking-wider block">
@@ -222,284 +275,404 @@ export const PricingSimulator: React.FC = () => {
             <span className="text-xs text-emerald-400 block mt-1">
               {params.gross_margin_pct}% Defensible Margin
             </span>
+            <span className="text-[10px] text-slate-500 block">
+              12M GP: ${(output.gross_profit_12m / 1000).toFixed(1)}k
+            </span>
           </div>
 
-          {/* NRR - Simplified Cohort Proxy */}
+          {/* Pure Cohort NRR & GRR */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
-            <span className="text-[11px] text-emerald-400 uppercase tracking-wider block mb-1 font-semibold flex items-center justify-between">
-              <span>NRR (Cohort Proxy)</span>
-              <span className="text-[9px] px-1 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">Proxy</span>
-            </span>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] text-emerald-400 uppercase tracking-wider font-semibold">
+                Cohort NRR & GRR
+              </span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 font-mono border border-emerald-800">
+                0 New Logos
+              </span>
+            </div>
             <div className="text-2xl font-black text-white font-mono">
-              {output.nrr_pct}%
+              {output.cohort_nrr?.nrr_pct ?? output.nrr_pct}%
             </div>
-            <span className="text-[11px] text-slate-400 block mt-1" title={output.nrr_label || "Net Revenue Retention (NRR) — Simplified Cohort Proxy"}>
-              Simplified Cohort Proxy
+            <div className="text-[11px] text-slate-400 mt-0.5 font-mono flex items-center justify-between">
+              <span>GRR: <strong className="text-slate-200">{output.cohort_nrr?.grr_pct ?? 79.4}%</strong></span>
+              <span className="text-slate-500 text-[10px]">Annualized</span>
+            </div>
+            <span className="text-[10px] text-slate-500 block mt-1">
+              Starting MRR: ${output.cohort_nrr?.starting_mrr ?? 3780}
             </span>
           </div>
 
-          {/* NorthBridge Shelfware Waste Avoided */}
-          <div className="bg-slate-900 border border-indigo-900/60 rounded-2xl p-5 shadow-lg col-span-2 lg:col-span-1">
-            <span className="text-[11px] text-indigo-400 uppercase tracking-wider block mb-1">
-              Shelfware Waste Saved
-            </span>
-            <div className="text-2xl font-black text-indigo-300 font-mono">
-              $
-              {(
-                output.northbridge_shadow[23].customer_wasted_shelfware_spend / 1000
-              ).toFixed(1)}
-              k/mo
+          {/* Pilot Unit Profitability Status */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg col-span-2 lg:col-span-1">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] text-slate-400 uppercase tracking-wider">
+                Pilot Profitability
+              </span>
+              <span
+                className={`text-[10px] px-2 py-0.5 rounded font-bold font-mono border ${
+                  output.pilot_economics?.is_profitable
+                    ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                    : 'bg-rose-950 text-rose-300 border-rose-800'
+                }`}
+              >
+                {output.pilot_economics?.status_label ?? 'PROFITABLE'}
+              </span>
             </div>
-            <span className="text-xs text-slate-400 block mt-1">
-              vs Incumbent $60/seat tax (Illustrative 33% Util.)
+            <div className="text-2xl font-black font-mono text-white">
+              ${output.pilot_economics?.contribution.toLocaleString()}
+            </div>
+            <span className="text-xs text-emerald-400 block mt-1">
+              {output.pilot_economics?.margin_pct}% Pilot Margin
+            </span>
+            <span className="text-[10px] text-slate-500 block">
+              Cost: ${output.pilot_economics?.delivery_cost.toLocaleString()} / pilot
             </span>
           </div>
         </div>
-
-        {/* Active-User Billing & Threshold Gate Verification Banner */}
-        <div className="bg-slate-900/90 border border-emerald-900/60 rounded-2xl p-4 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-emerald-950 border border-emerald-800 text-emerald-400 shrink-0">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-bold text-white uppercase tracking-wider">
-                  Active-User Billing Math:
-                </span>
-                <span className="text-[11px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 font-mono border border-emerald-800">
-                  active_billable_users = expanded_seats × actual_wau_rate
-                </span>
-              </div>
-              <p className="text-xs text-slate-300 mt-1">
-                Per account: <span className="text-white font-mono font-bold">{Math.round(params.pilot_users * params.expansion_seat_multiplier)}</span> expanded seats × <span className="text-emerald-400 font-mono font-bold">{Math.round((output.actual_wau_rate_applied ?? 0.72) * 100)}%</span> active WAU = <span className="text-emerald-300 font-mono font-bold">{Math.round(params.pilot_users * params.expansion_seat_multiplier * (output.actual_wau_rate_applied ?? 0.72))}</span> active billable users • <span className="text-slate-400 font-mono">base_mrr = active_billable_users × ${params.full_price_per_user}/mo</span>
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 text-xs bg-slate-950 px-4 py-2 rounded-xl border border-slate-800 shrink-0">
-            <div>
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Expansion Gate</span>
-              <span className="text-emerald-400 font-bold font-mono">
-                {Math.round(params.expansion_wau_threshold * 100)}% WAU
-              </span>
-            </div>
-            <div className="h-6 w-px bg-slate-800" />
-            <div>
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Eligible Accounts</span>
-              <span className="text-white font-bold font-mono">
-                {output.eligible_expansion_accounts_count ?? 8} / 24 Qualify
-              </span>
-            </div>
-            <div className="h-6 w-px bg-slate-800" />
-            <div>
-              <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Conversion Elasticity</span>
-              <span className="text-cyan-400 font-bold font-mono">
-                {output.effective_conversion_pct ?? 65}%
-              </span>
-            </div>
-          </div>
-        </div>
-        </>
       )}
 
-      {/* Main Simulator Grid: Controls + Charts */}
+      {/* Main Simulator Grid: Controls (Left) + Outcomes & Comparisons (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Interactive Financial Sliders */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
+        {/* Left Column: Categorized Assumptions & Sliders */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 className="font-bold text-white text-sm flex items-center gap-2">
               <Sliders className="w-4 h-4 text-emerald-400" />
               GTM & Pricing Controls
             </h3>
-            <span className="text-[11px] text-slate-500 font-mono">Pure Deterministic</span>
+            <span className="text-[11px] text-slate-500 font-mono">14 Case Inputs</span>
           </div>
 
-                    {/* Slider 0: Expansion WAU Qualification Threshold (Direct GTM Gate) */}
-          <div className="p-3.5 bg-emerald-950/30 border border-emerald-800/60 rounded-xl space-y-2">
-            <div className="flex justify-between text-xs font-semibold">
-              <span className="text-emerald-300 flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                Expansion WAU Threshold Gate
+          {/* CATEGORY 1: CASE FACTS */}
+          <div className="p-3 bg-slate-950/80 border border-slate-800/80 rounded-xl space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-indigo-400 flex items-center gap-1">
+                🏛️ Case Study Facts (Immutable Benchmarks)
               </span>
-              <span className="text-emerald-400 font-mono font-bold">
-                {Math.round(params.expansion_wau_threshold * 100)}% WAU
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 font-mono">Fixed</span>
+            </div>
+            <ul className="text-[11px] text-slate-400 space-y-1 font-mono">
+              <li>• Wedge: Mid-market & Enterprise FP&A Variance Workflow</li>
+              <li>• Incumbent Benchmark: NorthBridge Copilot ($60/seat flat)</li>
+              <li>• Challenger Constraints: 340-person startup, 18mo runway</li>
+            </ul>
+          </div>
+
+          {/* CATEGORY 2: SOLVANT STRATEGIC ARCHITECTURE */}
+          <div className="p-3 bg-slate-950/80 border border-slate-800/80 rounded-xl space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400 flex items-center gap-1">
+                ⚡ Solvant Pricing Architecture
+              </span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 font-mono">Strategic</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+              <div className="p-1.5 bg-slate-900 rounded border border-slate-800">
+                <span className="text-slate-500 block text-[9px]">ACTIVE SEAT PRICE</span>
+                <span className="text-emerald-300 font-bold">${params.full_price_per_user}/user/mo</span>
+              </div>
+              <div className="p-1.5 bg-slate-900 rounded border border-slate-800">
+                <span className="text-slate-500 block text-[9px]">INCLUDED ALLOWANCE</span>
+                <span className="text-emerald-300 font-bold">{params.workflow_run_allowance} runs/mo</span>
+              </div>
+            </div>
+          </div>
+
+          {/* CATEGORY 3: JUDGE-ADJUSTABLE INPUTS */}
+          <div className="space-y-4 pt-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-cyan-400 flex items-center gap-1">
+                🎛️ Judge-Adjustable Scenario Assumptions
+              </span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 font-mono border border-cyan-800">
+                Live Simulation
               </span>
             </div>
-            <input
-              type="range"
-              min="0.40"
-              max="0.85"
-              step="0.01"
-              value={params.expansion_wau_threshold}
-              onChange={(e) => handleSliderChange('expansion_wau_threshold', parseFloat(e.target.value))}
-              className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-emerald-500"
-            />
-            <div className="flex justify-between text-[10px] text-slate-400">
-              <span>Higher bar reduces qualified conversion</span>
-              <span className="text-emerald-400 font-mono font-bold">
-                {output?.eligible_expansion_accounts_count ?? 8} / 24 Qualify
+
+            {/* Input 1: Pilot Price */}
+            <div>
+              <div className="flex justify-between text-xs font-semibold mb-1">
+                <span className="text-slate-300">1. Pilot Upfront Fee</span>
+                <span className="text-emerald-400 font-mono">${params.pilot_price.toLocaleString()}</span>
+              </div>
+              <input
+                type="range"
+                min="6000"
+                max="25000"
+                step="1000"
+                value={params.pilot_price}
+                onChange={(e) => handleSliderChange('pilot_price', parseFloat(e.target.value))}
+                className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-emerald-500"
+              />
+              <div className="flex justify-between text-[10px] text-slate-500">
+                <span>100% refundable against SLA</span>
+                <span className="text-emerald-400 font-mono">
+                  {output?.pilot_economics?.margin_pct}% margin
+                </span>
+              </div>
+            </div>
+
+            {/* Input 2: Time to Full Price (Ramp Horizon: 3m, 6m, 9m, 12m) */}
+            <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2">
+              <div className="flex justify-between text-xs font-semibold">
+                <span className="text-slate-300 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                  2. Time to Full Price
+                </span>
+                <span className="text-cyan-400 font-mono font-bold">
+                  {params.time_to_full_price_months ?? 6} Months (Full Pricing: M{output?.full_price_start_month ?? 3})
+                </span>
+              </div>
+              <div className="grid grid-cols-4 gap-1.5">
+                {[3, 6, 9, 12].map((months) => (
+                  <button
+                    key={months}
+                    onClick={() => handleSliderChange('time_to_full_price_months', months)}
+                    className={`py-1.5 px-1 rounded-lg text-xs font-medium border text-center transition ${
+                      (params.time_to_full_price_months ?? 6) === months
+                        ? 'bg-cyan-950 border-cyan-700 text-cyan-300 font-bold shadow-sm'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {months} Mo
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-slate-400 leading-tight">
+                Transitions pilot customers to full pricing. Shorter ramp accelerates ARR; longer ramp lowers procurement friction.
+              </p>
+            </div>
+
+            {/* Input 3: Expansion WAU Threshold Gate */}
+            <div className="p-3 bg-emerald-950/20 border border-emerald-800/50 rounded-xl space-y-2">
+              <div className="flex justify-between text-xs font-semibold">
+                <span className="text-emerald-300 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  3. Expansion WAU Threshold
+                </span>
+                <span className="text-emerald-400 font-mono font-bold">
+                  {Math.round(params.expansion_wau_threshold * 100)}% WAU Gate
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0.40"
+                max="0.85"
+                step="0.01"
+                value={params.expansion_wau_threshold}
+                onChange={(e) => handleSliderChange('expansion_wau_threshold', parseFloat(e.target.value))}
+                className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-emerald-500"
+              />
+              <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+                <span>{output?.eligible_expansion_accounts_count ?? 8} / 24 accounts pass</span>
+                <span className="text-cyan-400">{output?.effective_conversion_pct ?? 65}% conv.</span>
+              </div>
+            </div>
+
+            {/* Input 4: Usage Credit Overage Rate */}
+            <div>
+              <div className="flex justify-between text-xs font-semibold mb-1">
+                <span className="text-slate-300">4. Usage Credit Rate</span>
+                <span className="text-emerald-400 font-mono">${params.usage_credit_rate.toFixed(2)}/run</span>
+              </div>
+              <input
+                type="range"
+                min="0.10"
+                max="1.00"
+                step="0.05"
+                value={params.usage_credit_rate}
+                onChange={(e) => handleSliderChange('usage_credit_rate', parseFloat(e.target.value))}
+                className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-emerald-500"
+              />
+              <span className="text-[10px] text-slate-500 block">
+                Billed on runs exceeding {params.workflow_run_allowance}/user/mo allowance
               </span>
             </div>
-          </div>
 
-          {/* Time to Full Price Selector (Material Model Variable) */}
-          <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-xl space-y-2">
-            <div className="flex justify-between text-xs font-semibold">
-              <span className="text-slate-300 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-cyan-400" />
-                Time to Full Price
+            {/* Input 5: Included Usage Allowance */}
+            <div>
+              <div className="flex justify-between text-xs font-semibold mb-1">
+                <span className="text-slate-300">5. Included Monthly Runs</span>
+                <span className="text-emerald-400 font-mono">{params.workflow_run_allowance} runs/user</span>
+              </div>
+              <input
+                type="range"
+                min="50"
+                max="200"
+                step="10"
+                value={params.workflow_run_allowance}
+                onChange={(e) => handleSliderChange('workflow_run_allowance', parseFloat(e.target.value))}
+                className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-emerald-500"
+              />
+            </div>
+
+            {/* Input 6: Pilot Users */}
+            <div>
+              <div className="flex justify-between text-xs font-semibold mb-1">
+                <span className="text-slate-300">6. Pilot User Headcount</span>
+                <span className="text-emerald-400 font-mono">{params.pilot_users} users</span>
+              </div>
+              <input
+                type="range"
+                min="20"
+                max="100"
+                step="5"
+                value={params.pilot_users}
+                onChange={(e) => handleSliderChange('pilot_users', parseInt(e.target.value))}
+                className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-emerald-500"
+              />
+            </div>
+
+            {/* Input 7: Expansion Seat Multiplier */}
+            <div>
+              <div className="flex justify-between text-xs font-semibold mb-1">
+                <span className="text-slate-300">7. Expansion Multiplier</span>
+                <span className="text-emerald-400 font-mono">{params.expansion_seat_multiplier}x ({Math.round(params.pilot_users * params.expansion_seat_multiplier)} seats)</span>
+              </div>
+              <input
+                type="range"
+                min="2.0"
+                max="6.0"
+                step="0.5"
+                value={params.expansion_seat_multiplier}
+                onChange={(e) => handleSliderChange('expansion_seat_multiplier', parseFloat(e.target.value))}
+                className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-emerald-500"
+              />
+            </div>
+
+            {/* Input 8: Pilot-to-Expansion Conversion */}
+            <div>
+              <div className="flex justify-between text-xs font-semibold mb-1">
+                <span className="text-slate-300">8. Pilot-to-Expansion Conv.</span>
+                <span className="text-emerald-400 font-mono">{params.pilot_to_expansion_conversion_pct}%</span>
+              </div>
+              <input
+                type="range"
+                min="30"
+                max="90"
+                step="5"
+                value={params.pilot_to_expansion_conversion_pct}
+                onChange={(e) => handleSliderChange('pilot_to_expansion_conversion_pct', parseFloat(e.target.value))}
+                className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-emerald-500"
+              />
+            </div>
+
+            {/* Input 9: Post-Expansion Monthly Churn */}
+            <div>
+              <div className="flex justify-between text-xs font-semibold mb-1">
+                <span className="text-slate-300">9. Monthly Churn Rate</span>
+                <span className="text-amber-400 font-mono">{params.monthly_churn_pct}% / mo</span>
+              </div>
+              <input
+                type="range"
+                min="0.5"
+                max="5.0"
+                step="0.1"
+                value={params.monthly_churn_pct}
+                onChange={(e) => handleSliderChange('monthly_churn_pct', parseFloat(e.target.value))}
+                className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-amber-500"
+              />
+              <span className="text-[10px] text-slate-500 block">
+                Annualized churn exposure: {output?.churn_risk?.annualized_churn_pct ?? 16.6}%
               </span>
-              <span className="text-cyan-400 font-mono font-bold">
-                {params.time_to_full_price_days ?? 60} Days (Full Price: Month {output?.full_price_start_month ?? 3})
+            </div>
+
+            {/* Input 10: AI Inference Cost per Run */}
+            <div>
+              <div className="flex justify-between text-xs font-semibold mb-1">
+                <span className="text-slate-300">10. AI Compute Cost (COGS)</span>
+                <span className="text-cyan-400 font-mono">${(params.ai_cost_per_run ?? 0.0080).toFixed(4)}/run</span>
+              </div>
+              <input
+                type="range"
+                min="0.0030"
+                max="0.0200"
+                step="0.0010"
+                value={params.ai_cost_per_run ?? 0.0080}
+                onChange={(e) => handleSliderChange('ai_cost_per_run', parseFloat(e.target.value))}
+                className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-cyan-500"
+              />
+              <span className="text-[10px] text-slate-500 block">
+                Groq LLaMA 3.3 70B inference cost per executed workflow
               </span>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              {[30, 60, 90].map((days) => (
-                <button
-                  key={days}
-                  onClick={() => handleSliderChange('time_to_full_price_days' as any, days)}
-                  className={`py-1.5 px-2 rounded-lg text-xs font-medium border transition ${
-                    (params.time_to_full_price_days ?? 60) === days
-                      ? 'bg-cyan-950 border-cyan-700 text-cyan-300 font-bold shadow-sm'
-                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {days}d (M{days === 30 ? 2 : days === 60 ? 3 : 4})
-                </button>
-              ))}
-            </div>
-            <p className="text-[10px] text-slate-400 leading-tight">
-              {params.time_to_full_price_days === 30
-                ? '30d pilot: expansion begins Month 2 (11 full-price months in Y1)'
-                : params.time_to_full_price_days === 90
-                ? '90d pilot: expansion begins Month 4 (9 full-price months in Y1)'
-                : '60d baseline: expansion begins Month 3 (10 full-price months in Y1)'}
-            </p>
-          </div>
 
-          {/* Slider 1: Pilot Price */}
-          <div>
-            <div className="flex justify-between text-xs font-semibold mb-1">
-              <span className="text-slate-300">60-Day Pilot Deposit</span>
-              <span className="text-emerald-400 font-mono">${params.pilot_price.toLocaleString()}</span>
+            {/* Input 11: Customer Success Cost */}
+            <div>
+              <div className="flex justify-between text-xs font-semibold mb-1">
+                <span className="text-slate-300">11. Customer Success Cost</span>
+                <span className="text-emerald-400 font-mono">${params.cs_cost_per_customer_month ?? 350}/acct/mo</span>
+              </div>
+              <input
+                type="range"
+                min="150"
+                max="800"
+                step="25"
+                value={params.cs_cost_per_customer_month ?? 350}
+                onChange={(e) => handleSliderChange('cs_cost_per_customer_month', parseFloat(e.target.value))}
+                className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-emerald-500"
+              />
             </div>
-            <input
-              type="range"
-              min="8000"
-              max="24000"
-              step="1000"
-              value={params.pilot_price}
-              onChange={(e) => handleSliderChange('pilot_price', parseFloat(e.target.value))}
-              className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-emerald-500"
-            />
-            <span className="text-[10px] text-slate-500 block mt-0.5">
-              100% refundable against value targets
-            </span>
-          </div>
 
-          {/* Slider 2: Full Price Per Active User */}
-          <div>
-            <div className="flex justify-between text-xs font-semibold mb-1">
-              <span className="text-slate-300">Post-Pilot Active User Price</span>
-              <span className="text-emerald-400 font-mono">${params.full_price_per_user}/user/mo</span>
+            {/* Input 12: Cloud Infrastructure Cost */}
+            <div>
+              <div className="flex justify-between text-xs font-semibold mb-1">
+                <span className="text-slate-300">12. Cloud VPC / KMS Cost</span>
+                <span className="text-emerald-400 font-mono">${params.cloud_cost_per_customer_month ?? 150}/acct/mo</span>
+              </div>
+              <input
+                type="range"
+                min="50"
+                max="400"
+                step="25"
+                value={params.cloud_cost_per_customer_month ?? 150}
+                onChange={(e) => handleSliderChange('cloud_cost_per_customer_month', parseFloat(e.target.value))}
+                className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-emerald-500"
+              />
             </div>
-            <input
-              type="range"
-              min="20"
-              max="45"
-              step="1"
-              value={params.full_price_per_user}
-              onChange={(e) => handleSliderChange('full_price_per_user', parseFloat(e.target.value))}
-              className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-emerald-500"
-            />
-            <span className="text-[10px] text-slate-500 block mt-0.5">
-              Billed ONLY on customer's weekly active users
-            </span>
-          </div>
 
-          {/* Slider 3: Expansion Conversion Rate */}
-          <div>
-            <div className="flex justify-between text-xs font-semibold mb-1">
-              <span className="text-slate-300">Pilot → Expansion Conversion</span>
-              <span className="text-emerald-400 font-mono">{params.pilot_to_expansion_conversion_pct}%</span>
+            {/* Input 13: Other Delivery Cost */}
+            <div>
+              <div className="flex justify-between text-xs font-semibold mb-1">
+                <span className="text-slate-300">13. Other Delivery / Setup Cost</span>
+                <span className="text-emerald-400 font-mono">${params.other_delivery_cost_per_customer_month ?? 100}/acct/mo</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="300"
+                step="25"
+                value={params.other_delivery_cost_per_customer_month ?? 100}
+                onChange={(e) => handleSliderChange('other_delivery_cost_per_customer_month', parseFloat(e.target.value))}
+                className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-emerald-500"
+              />
             </div>
-            <input
-              type="range"
-              min="30"
-              max="90"
-              step="5"
-              value={params.pilot_to_expansion_conversion_pct}
-              onChange={(e) =>
-                handleSliderChange('pilot_to_expansion_conversion_pct', parseFloat(e.target.value))
-              }
-              className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-emerald-500"
-            />
-            <span className="text-[10px] text-slate-500 block mt-0.5">
-              Target baseline: 65% graduation rate
-            </span>
-          </div>
 
-          {/* Slider 4: Monthly Churn Rate */}
-          <div>
-            <div className="flex justify-between text-xs font-semibold mb-1">
-              <span className="text-slate-300">Post-Expansion Monthly Churn</span>
-              <span className="text-amber-400 font-mono">{params.monthly_churn_pct}%</span>
+            {/* Input 14: New Pilots Onboarded per Month */}
+            <div>
+              <div className="flex justify-between text-xs font-semibold mb-1">
+                <span className="text-slate-300">14. New Pilots Per Month</span>
+                <span className="text-indigo-400 font-mono">{params.new_pilots_per_month} new logos/mo</span>
+              </div>
+              <input
+                type="range"
+                min="2"
+                max="15"
+                step="1"
+                value={params.new_pilots_per_month}
+                onChange={(e) => handleSliderChange('new_pilots_per_month', parseInt(e.target.value))}
+                className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-indigo-500"
+              />
+              <span className="text-[10px] text-slate-500 block">
+                Top-of-funnel velocity. (Notice: does NOT change cohort NRR!)
+              </span>
             </div>
-            <input
-              type="range"
-              min="0.5"
-              max="5.0"
-              step="0.1"
-              value={params.monthly_churn_pct}
-              onChange={(e) => handleSliderChange('monthly_churn_pct', parseFloat(e.target.value))}
-              className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-amber-500"
-            />
-          </div>
-
-          {/* Slider 5: Gross Margin Rate */}
-          <div>
-            <div className="flex justify-between text-xs font-semibold mb-1">
-              <span className="text-slate-300">Gross Margin Target</span>
-              <span className="text-emerald-400 font-mono">{params.gross_margin_pct}%</span>
-            </div>
-            <input
-              type="range"
-              min="65"
-              max="85"
-              step="0.5"
-              value={params.gross_margin_pct}
-              onChange={(e) => handleSliderChange('gross_margin_pct', parseFloat(e.target.value))}
-              className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-emerald-500"
-            />
-            <span className="text-[10px] text-slate-500 block mt-0.5">
-              Defensible cost stack: 23.5% COGS (11.5% LLM inference + 8.5% CS + 3.5% Cloud)
-            </span>
-          </div>
-
-          {/* Slider 6: Overage Run Pricing */}
-          <div>
-            <div className="flex justify-between text-xs font-semibold mb-1">
-              <span className="text-slate-300">Usage Credit Overage Rate</span>
-              <span className="text-emerald-400 font-mono">${params.usage_credit_rate.toFixed(2)}/run</span>
-            </div>
-            <input
-              type="range"
-              min="0.10"
-              max="1.00"
-              step="0.05"
-              value={params.usage_credit_rate}
-              onChange={(e) => handleSliderChange('usage_credit_rate', parseFloat(e.target.value))}
-              className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-emerald-500"
-            />
-            <span className="text-[10px] text-slate-500 block mt-0.5">
-              Billed for workflow runs exceeding 100/mo allowance
-            </span>
           </div>
         </div>
 
-        {/* Right Column (2 cols): 24-Month Projection Chart & NorthBridge Shadow */}
+        {/* Right Column (2 cols): 24M Projections, Comparison Matrix & Per-Account Breakdown */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Main 24-Month Chart */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
               <div>
@@ -508,11 +681,10 @@ export const PricingSimulator: React.FC = () => {
                   24-Month ARR Projection & NorthBridge Shadow Overlay
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Solvant usage-metered ARR vs NorthBridge incumbent seat-tax model ($60/licensed seat under illustrative industry assumption — 33% utilization).
+                  Solvant active usage-metered ARR vs NorthBridge incumbent seat-tax model ($60/licensed seat under illustrative 33% utilization).
                 </p>
               </div>
 
-              {/* Toggle NorthBridge Shadow */}
               <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-200 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl">
                 <input
                   type="checkbox"
@@ -585,198 +757,144 @@ export const PricingSimulator: React.FC = () => {
             </div>
           </div>
 
-          {/* Per-Account Billing Truth: Provisioned vs. Active vs. Billable Users */}
+          {/* Time-to-Full-Price Comparison Matrix (Explicit Case Requirement) */}
+          {output?.time_to_full_price_comparison && (
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-bold text-white text-sm flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-cyan-400" />
+                  Time-to-Full-Price Impact Matrix (3M, 6M, 9M, 12M)
+                </h4>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 font-mono border border-cyan-800">
+                  Case Requirement
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs font-mono text-left">
+                  <thead>
+                    <tr className="border-b border-slate-800 text-slate-400 text-[11px]">
+                      <th className="pb-2">Ramp Horizon</th>
+                      <th className="pb-2">Full Price Start</th>
+                      <th className="pb-2">12M Revenue</th>
+                      <th className="pb-2">24M Revenue</th>
+                      <th className="pb-2">Gross Margin</th>
+                      <th className="pb-2">Active Accounts (24M)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 text-slate-200">
+                    {output.time_to_full_price_comparison.map((point) => {
+                      const isSelected = (params.time_to_full_price_months ?? 6) === point.horizon_months;
+                      return (
+                        <tr
+                          key={point.horizon_months}
+                          className={isSelected ? 'bg-cyan-950/40 text-cyan-200 font-bold' : ''}
+                        >
+                          <td className="py-2 flex items-center gap-1.5">
+                            {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />}
+                            {point.horizon_months} Months
+                          </td>
+                          <td className="py-2 text-slate-400">Month {point.full_price_start_month}</td>
+                          <td className="py-2 text-white">${(point.revenue_12m / 1000).toFixed(1)}k</td>
+                          <td className="py-2 text-emerald-400 font-bold">${(point.revenue_24m / 1000000).toFixed(2)}M</td>
+                          <td className="py-2 text-emerald-300">{point.gross_margin_pct}%</td>
+                          <td className="py-2 text-slate-300">{point.active_customers_24m} accts</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Per-Account Billing Truth: Provisioned vs. Active vs. Billable */}
           {output?.per_account_sample && (
-            <div className="bg-slate-900 border border-emerald-900/60 rounded-2xl p-6 shadow-xl relative overflow-hidden bg-gradient-to-b from-emerald-950/20 to-slate-900">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div className="bg-slate-900 border border-emerald-900/60 rounded-2xl p-5 shadow-xl bg-gradient-to-b from-emerald-950/20 to-slate-900">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
                 <div>
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950 border border-emerald-800 text-emerald-300 text-[11px] font-semibold mb-1">
                     <Users className="w-3 h-3 text-emerald-400" />
                     Per-Account Billing Truth
                   </div>
-                  <h4 className="text-base font-bold text-white">
+                  <h4 className="text-sm font-bold text-white">
                     Provisioned Seats vs. Active Users vs. Billable Users
                   </h4>
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Representative Account</span>
-                  <span className="text-xs font-mono font-bold text-emerald-300">Acme Corp Expansion</span>
-                </div>
+                <span className="text-xs font-mono font-bold text-emerald-300">Acme Corp Expansion Anchor</span>
               </div>
 
-              {/* Metric Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block mb-0.5">1. Provisioned Seats</span>
-                  <div className="text-xl font-black text-white font-mono">{output.per_account_sample.licensed_users}</div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Provisioned</span>
+                  <div className="text-lg font-black text-white font-mono">{output.per_account_sample.licensed_users}</div>
                   <span className="text-[10px] text-slate-500">Enterprise total</span>
                 </div>
-                <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block mb-0.5">2. Activated Users</span>
-                  <div className="text-xl font-black text-slate-200 font-mono">{output.per_account_sample.activated_users}</div>
-                  <span className="text-[10px] text-slate-500">Completed onboarding</span>
+                <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Activated</span>
+                  <div className="text-lg font-black text-slate-200 font-mono">{output.per_account_sample.activated_users}</div>
+                  <span className="text-[10px] text-slate-500">Onboarded</span>
                 </div>
-                <div className="bg-slate-950/80 p-3 rounded-xl border border-emerald-900/50">
-                  <span className="text-[10px] text-emerald-400 uppercase tracking-wider block mb-0.5">3. Weekly Active (WAU)</span>
-                  <div className="text-xl font-black text-emerald-300 font-mono">{output.per_account_sample.weekly_active_users}</div>
-                  <span className="text-[10px] text-emerald-500 font-mono">{Math.round(output.per_account_sample.weekly_active_rate * 100)}% verified usage</span>
+                <div className="bg-slate-950 p-2.5 rounded-xl border border-emerald-900/50">
+                  <span className="text-[10px] text-emerald-400 uppercase tracking-wider block">Weekly Active</span>
+                  <div className="text-lg font-black text-emerald-300 font-mono">{output.per_account_sample.weekly_active_users}</div>
+                  <span className="text-[10px] text-emerald-500 font-mono">{Math.round(output.per_account_sample.weekly_active_rate * 100)}% usage</span>
                 </div>
-                <div className="bg-slate-950/80 p-3 rounded-xl border border-emerald-800 bg-emerald-950/20">
-                  <span className="text-[10px] text-emerald-400 uppercase tracking-wider block mb-0.5">4. Billable Active Users</span>
-                  <div className="text-xl font-black text-emerald-400 font-mono">{output.per_account_sample.billable_active_users}</div>
-                  <span className="text-[10px] text-emerald-300 font-mono">You pay ONLY for active</span>
+                <div className="bg-slate-950 p-2.5 rounded-xl border border-emerald-800 bg-emerald-950/20">
+                  <span className="text-[10px] text-emerald-400 uppercase tracking-wider block">Billable Active</span>
+                  <div className="text-lg font-black text-emerald-400 font-mono">{output.per_account_sample.billable_active_users}</div>
+                  <span className="text-[10px] text-emerald-300 font-mono">Pay ONLY active</span>
                 </div>
               </div>
 
-              {/* Financial Comparison Banner */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                  <div>
-                    <span className="text-slate-400 block text-[11px]">Solvant Usage-Metered Monthly Spend:</span>
-                    <span className="text-lg font-bold text-white font-mono">
-                      ${output.per_account_sample.total_mrr.toLocaleString()} / mo
-                    </span>
-                    <span className="text-slate-500 ml-2 font-mono text-[11px]">
-                      (${output.per_account_sample.base_mrr} base + ${output.per_account_sample.usage_overage_mrr} overage)
-                    </span>
-                  </div>
-                  <div className="sm:text-right">
-                    <span className="text-slate-400 block text-[11px]">Incumbent Flat License Spend:</span>
-                    <span className="text-lg font-bold text-rose-400 font-mono">
-                      ${(output.per_account_sample.licensed_users * 60).toLocaleString()} / mo
-                    </span>
-                    <span className="text-slate-500 ml-2 font-mono text-[11px]">(175 seats × $60 flat)</span>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-slate-800 flex items-center justify-between flex-wrap gap-2">
-                  <div className="text-xs text-emerald-300 font-medium flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>{output.per_account_sample.shelfware_savings_statement}</span>
-                  </div>
-                  <span className="text-xs font-bold text-emerald-400 font-mono bg-emerald-950 px-2.5 py-1 rounded border border-emerald-800">
-                    Saved: ${((output.per_account_sample.licensed_users * 60) - output.per_account_sample.total_mrr).toLocaleString()} / mo
-                  </span>
-                </div>
+              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between flex-wrap gap-2 text-xs">
+                <span className="text-slate-300">
+                  {output.per_account_sample.shelfware_savings_statement}
+                </span>
+                <span className="font-bold text-emerald-400 font-mono bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
+                  Saved: ${((output.per_account_sample.licensed_users * 60) - output.per_account_sample.total_mrr).toLocaleString()} / mo
+                </span>
               </div>
             </div>
           )}
 
-          {/* Dynamic AI Infrastructure Cost & Compute Transparency */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-cyan-950 border border-cyan-800 text-cyan-400">
-                  <Cpu className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                    Dynamic AI Infrastructure Cost (COGS)
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 font-mono border border-cyan-800">
-                      Groq LLaMA 3.3 70B
-                    </span>
-                  </h4>
-                  <p className="text-xs text-slate-400">
-                    Deterministic execution cost: $0.0080 per workflow run. Scaled against active user executions.
-                  </p>
-                </div>
+          {/* GROQ PRICING STRATEGIST */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl relative">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-emerald-400" />
+                <h4 className="text-sm font-bold text-white">Groq Pricing Strategist (Tradeoff Explainer)</h4>
               </div>
-              <div className="flex items-center gap-4 text-xs font-mono bg-slate-950 px-4 py-2.5 rounded-xl border border-slate-800">
-                <div>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">12M AI Compute</span>
-                  <span className="text-cyan-300 font-bold font-mono">
-                    ${Math.round(output?.total_ai_infrastructure_cost_12m ?? 39552).toLocaleString()}
-                  </span>
-                </div>
-                <div className="h-6 w-px bg-slate-800" />
-                <div>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">24M AI Compute</span>
-                  <span className="text-cyan-400 font-bold font-mono">
-                    ${Math.round(output?.total_ai_infrastructure_cost_24m ?? 153950).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* GROQ PRICING STRATEGIST CARD */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    Groq Pricing Strategist (Tradeoff Explainer)
-                    <span className="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 font-mono font-normal">
-                      Explain-Only
-                    </span>
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    Interprets deterministic simulation facts. Explains why numbers moved to a CFO.
-                  </p>
-                </div>
-              </div>
-
               {strategistResponse && (
-                <span
-                  className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                    strategistResponse.is_live_llm
-                      ? 'bg-emerald-950 text-emerald-300 border border-emerald-700'
-                      : 'bg-indigo-950 text-indigo-300 border border-indigo-700'
-                  }`}
-                >
-                  {strategistResponse.is_live_llm
-                    ? '✓ Groq Live (LLaMA 3.3 70B)'
-                    : '✓ Verified Baseline Cache'}
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-emerald-950 text-emerald-300 border border-emerald-700">
+                  {strategistResponse.is_live_llm ? '✓ Groq Live' : '✓ Verified Baseline Cache'}
                 </span>
               )}
             </div>
-
             {strategistResponse ? (
-              <div className="space-y-4 bg-slate-950/80 border border-slate-800/80 rounded-xl p-5">
+              <div className="space-y-3 bg-slate-950/80 border border-slate-800/80 rounded-xl p-4 text-xs">
                 <div>
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 block mb-1">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 block">
                     CFO Executive Summary
                   </span>
-                  <p className="text-xs text-slate-200">{strategistResponse.summary}</p>
+                  <p className="text-slate-200 mt-0.5">{strategistResponse.summary}</p>
                 </div>
-
                 <div>
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 block mb-1">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 block">
                     Core Strategic Tradeoff
                   </span>
-                  <p className="text-xs font-semibold text-emerald-400">
-                    {strategistResponse.primary_tradeoff}
-                  </p>
+                  <p className="font-semibold text-emerald-400 mt-0.5">{strategistResponse.primary_tradeoff}</p>
                 </div>
-
-                <div>
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 block mb-1">
-                    Unit Economic Strategic Implications
+                <div className="pt-2 border-t border-slate-800">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 block">
+                    CFO Soundbite
                   </span>
-                  <ul className="space-y-1.5 text-xs text-slate-300">
-                    {strategistResponse.strategic_implications.map((imp, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <span className="text-emerald-400 font-bold">•</span>
-                        <span>{imp}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="pt-3 border-t border-slate-800/80">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 block mb-1">
-                    CFO Soundbite (Rehearse this on stage)
-                  </span>
-                  <blockquote className="text-xs italic text-indigo-300 border-l-2 border-indigo-500 pl-3">
+                  <blockquote className="italic text-indigo-300 border-l-2 border-indigo-500 pl-2.5 mt-0.5">
                     {strategistResponse.cfo_soundbite}
                   </blockquote>
                 </div>
               </div>
             ) : (
-              <div className="py-6 text-center text-xs text-slate-500">
+              <div className="py-4 text-center text-xs text-slate-500">
                 Calculating strategist perspective...
               </div>
             )}
@@ -784,7 +902,180 @@ export const PricingSimulator: React.FC = () => {
         </div>
       </div>
 
-      {/* Real-Competitor Pricing Teardowns (20% Quantitative Rigor Requirement) */}
+      {/* BOTTOM PANEL: 3-COLUMN DEEP-DIVE INTO PILOT UNIT ECONOMICS, CHURN RISK & COHORT NRR */}
+      {output && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Card 1: PILOT UNIT ECONOMICS */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-emerald-400" />
+                <h4 className="font-bold text-white text-sm">Pilot Unit Economics</h4>
+              </div>
+              <span
+                className={`text-[10px] px-2 py-0.5 rounded font-bold font-mono border ${
+                  output.pilot_economics?.is_profitable
+                    ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                    : 'bg-rose-950 text-rose-300 border-rose-800'
+                }`}
+              >
+                {output.pilot_economics?.status_label}
+              </span>
+            </div>
+
+            <div className="space-y-2 text-xs font-mono">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Pilot Deposit / Price:</span>
+                <span className="text-white font-bold">${output.pilot_economics?.revenue.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Total Delivery Cost:</span>
+                <span className="text-rose-400 font-bold">-${output.pilot_economics?.delivery_cost.toLocaleString()}</span>
+              </div>
+              <div className="pl-3 border-l border-slate-800 space-y-1 text-[11px] text-slate-500">
+                <div className="flex justify-between">
+                  <span>• AI Inference ({params.workflow_runs_per_user_month} runs):</span>
+                  <span>${output.pilot_economics?.ai_inference_cost.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>• Customer Success Onboarding:</span>
+                  <span>${output.pilot_economics?.customer_success_cost.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>• Cloud VPC & KMS Hosting:</span>
+                  <span>${output.pilot_economics?.cloud_hosting_cost.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>• Setup & FP&A Integration:</span>
+                  <span>${output.pilot_economics?.other_delivery_cost.toLocaleString()}</span>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-slate-800 flex justify-between font-bold">
+                <span className="text-slate-300">Net Pilot Contribution:</span>
+                <span className={output.pilot_economics?.is_profitable ? 'text-emerald-400' : 'text-rose-400'}>
+                  ${output.pilot_economics?.contribution.toLocaleString()} ({output.pilot_economics?.margin_pct}%)
+                </span>
+              </div>
+            </div>
+            <p className="text-[10px] text-slate-500 italic">
+              Guarantees pilot pricing is not structurally loss-making beyond defined pilot duration.
+            </p>
+          </div>
+
+          {/* Card 2: DETERMINISTIC CHURN-RISK MODEL */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-400" />
+                <h4 className="font-bold text-white text-sm">Deterministic Churn Risk</h4>
+              </div>
+              <span
+                className={`text-[10px] px-2 py-0.5 rounded font-bold font-mono border ${
+                  output.churn_risk?.risk_level === 'LOW'
+                    ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                    : output.churn_risk?.risk_level === 'HIGH'
+                    ? 'bg-rose-950 text-rose-300 border-rose-800'
+                    : 'bg-amber-950 text-amber-300 border-amber-800'
+                }`}
+              >
+                {output.churn_risk?.risk_level} RISK ({output.churn_risk?.risk_score}/100)
+              </span>
+            </div>
+
+            <div className="space-y-1.5 text-xs font-mono">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Annualized Churn Exposure:</span>
+                <span className="text-amber-400 font-bold">{output.churn_risk?.annualized_churn_pct}%</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Churned Accounts (12M / 24M):</span>
+                <span className="text-slate-200">
+                  {output.churn_risk?.churned_customers_12m} accts / {output.churn_risk?.churned_customers_24m} accts
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">24M ARR Lost to Churn:</span>
+                <span className="text-rose-400 font-bold">
+                  ${((output.churn_risk?.revenue_lost_to_churn_24m ?? 0) / 1000).toFixed(1)}k
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-800">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 block mb-1">
+                Deterministic Causal Drivers
+              </span>
+              <ul className="text-[11px] text-slate-400 space-y-1">
+                {output.churn_risk?.key_drivers.slice(0, 3).map((driver, idx) => (
+                  <li key={idx} className="flex items-start gap-1.5">
+                    <span className="text-amber-400 font-bold">•</span>
+                    <span>{driver}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Card 3: COHORT-BASED NRR & GRR */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div className="flex items-center gap-2">
+                <Percent className="w-4 h-4 text-emerald-400" />
+                <h4 className="font-bold text-white text-sm">Cohort-Based NRR & GRR</h4>
+              </div>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-950 text-emerald-400 font-mono border border-emerald-800">
+                Zero New Logos
+              </span>
+            </div>
+
+            <div className="space-y-1.5 text-xs font-mono">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Starting MRR (Cohort Baseline):</span>
+                <span className="text-white font-bold">${output.cohort_nrr?.starting_mrr.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">+ Expansion (Usage Overages):</span>
+                <span className="text-emerald-400 font-bold">+${output.cohort_nrr?.expansion_mrr.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">- Contraction (Seasonal Fluctuation):</span>
+                <span className="text-amber-400 font-bold">-${output.cohort_nrr?.contraction_mrr.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">- Churn (Annualized Cohort Decay):</span>
+                <span className="text-rose-400 font-bold">-${output.cohort_nrr?.churn_mrr.toLocaleString()}</span>
+              </div>
+              <div className="pt-2 border-t border-slate-800 flex justify-between font-bold">
+                <span className="text-slate-300">Ending Recurring MRR:</span>
+                <span className="text-emerald-300">${output.cohort_nrr?.ending_mrr.toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-800 flex justify-between items-center text-xs">
+              <div>
+                <span className="text-[10px] text-slate-500 uppercase block">Cohort NRR</span>
+                <span className="text-base font-black text-emerald-400 font-mono">
+                  {output.cohort_nrr?.nrr_pct}%
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 uppercase block">Gross Ret. (GRR)</span>
+                <span className="text-base font-black text-slate-200 font-mono">
+                  {output.cohort_nrr?.grr_pct}%
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-500 uppercase block">Y2 vs Y1 Growth</span>
+                <span className="text-base font-black text-cyan-400 font-mono">
+                  +{output.revenue_growth_y2_vs_y1}%
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Real-Competitor Pricing Teardowns */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
           <div>
@@ -847,7 +1138,7 @@ export const PricingSimulator: React.FC = () => {
                 <div>
                   <span className="font-bold text-white block">LLM Inference & Fast Compute (Groq)</span>
                   <span className="text-[10px] text-slate-400">
-                    Llama 3.3 70B tokens + variance JSON parsing
+                    Llama 3.3 70B tokens + variance JSON parsing ($0.0080/run)
                   </span>
                 </div>
                 <span className="text-amber-400 font-bold">11.5%</span>
@@ -857,7 +1148,7 @@ export const PricingSimulator: React.FC = () => {
                 <div>
                   <span className="font-bold text-white block">Customer Success & FP&A Tuning Support</span>
                   <span className="text-[10px] text-slate-400">
-                    Solutions engineer hours amortized per account
+                    Solutions engineer hours amortized per account ($350/mo)
                   </span>
                 </div>
                 <span className="text-amber-400 font-bold">8.5%</span>
@@ -867,7 +1158,7 @@ export const PricingSimulator: React.FC = () => {
                 <div>
                   <span className="font-bold text-white block">Cloud Infrastructure & VPC Isolation</span>
                   <span className="text-[10px] text-slate-400">
-                    Stateless AWS/Frankfurt containers & KMS encryption
+                    Stateless AWS/Frankfurt containers & KMS encryption ($150/mo)
                   </span>
                 </div>
                 <span className="text-amber-400 font-bold">3.5%</span>
