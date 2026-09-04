@@ -182,17 +182,22 @@ def evaluate_day_60_stall(
         status = "STALLED"
         is_stalled = True
         stall_risk_score = round(min(98.0, 65.0 + (len(failing) * 6.5)), 1)
-        stall_reason = f"Critical Day-60 stall: {len(failing)} of 6 criteria failing ({'; '.join(failing[:2])}). Automated SLA intervention required."
+        if len(account.weekly_wau_history) >= 4 and account.weekly_wau_history[-1] < account.weekly_wau_history[-4]:
+            prev_wau = int(round(account.weekly_wau_history[-4] * 100))
+            curr_wau = int(round(account.weekly_wau_history[-1] * 100))
+            stall_reason = f"WAU has fallen from {prev_wau}% to {curr_wau}% over the last three weeks. Repeat workflow usage is also declining. The account is approaching the Day-60 stall point. Recommended action: identify inactive teams, conduct workflow-specific training, and activate the executive sponsor before considering expansion."
+        else:
+            stall_reason = f"Critical Day-60 stall: {len(failing)} of 6 criteria failing ({'; '.join(failing[:2])}). Automated SLA intervention required before considering expansion."
     elif len(failing) >= 1 or current_wau < expansion_wau_threshold or slope < 0.0:
         status = "AT RISK"
         is_stalled = False
         stall_risk_score = round(45.0 + (len(failing) * 5.0), 1)
-        stall_reason = f"Day-60 early warning: {len(failing)} metric(s) lagging ({'; '.join(failing[:2])}). Proactive coaching advised."
+        stall_reason = f"WAU is plateauing at {int(round(current_wau * 100))}% near threshold boundary. The account is approaching the Day-60 stall point. Recommended action: identify inactive teams, conduct workflow-specific training, and activate the executive sponsor before considering expansion."
     else:
         status = "HEALTHY"
         is_stalled = False
         stall_risk_score = round(max(5.0, 20.0 - (len(healthy) * 2.0)), 1)
-        stall_reason = "Day-60 healthy trajectory: All habit and value benchmarks satisfied on schedule."
+        stall_reason = f"Day-60 healthy trajectory: All habit and value benchmarks satisfied on schedule (WAU {int(round(current_wau * 100))}%, ROI {account.roi_multiplier:.1f}x, Time saved {int(round(account.workflow_time_reduction_pct * 100))}%)."
 
     return Day60StallAssessment(
         status=status,

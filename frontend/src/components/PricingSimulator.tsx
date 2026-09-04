@@ -331,6 +331,49 @@ export const PricingSimulator: React.FC = () => {
         </div>
       )}
 
+      {/* 12M / 24M Financial Streams & Churn Economics Decomposition Bar */}
+      {output && (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 text-xs font-mono">
+          <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Pilot Rev (12M)</span>
+            <span className="text-sm font-black text-white block mt-0.5">${(output.pilot_revenue_total_12m ?? 0).toLocaleString()}</span>
+            <span className="text-[10px] text-slate-500">Upfront deposits</span>
+          </div>
+          <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Transition Rev (12M)</span>
+            <span className="text-sm font-black text-cyan-300 block mt-0.5">${(output.transition_revenue_total_12m ?? 0).toLocaleString()}</span>
+            <span className="text-[10px] text-slate-500">Discount ramp</span>
+          </div>
+          <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Expansion Rev (12M)</span>
+            <span className="text-sm font-black text-emerald-400 block mt-0.5">${(output.expansion_revenue_total_12m ?? 0).toLocaleString()}</span>
+            <span className="text-[10px] text-slate-500">Active billable base</span>
+          </div>
+          <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Usage Rev (12M)</span>
+            <span className="text-sm font-black text-indigo-300 block mt-0.5">${(output.usage_revenue_total_12m ?? 0).toLocaleString()}</span>
+            <span className="text-[10px] text-slate-500">Overage credits</span>
+          </div>
+          <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Active Customers</span>
+            <span className="text-sm font-black text-white block mt-0.5">{output.active_customers_12m} <span className="text-slate-500 text-xs font-normal">(12M)</span> / {output.active_customers_24m} <span className="text-slate-500 text-xs font-normal">(24M)</span></span>
+            <span className="text-[10px] text-slate-500">{output.active_seats_12m} / {output.active_seats_24m} seats</span>
+          </div>
+          <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Churn ARR Lost</span>
+            <span className="text-sm font-black text-rose-400 block mt-0.5">${((output.churn_risk?.revenue_lost_to_churn_12m ?? 0) / 1000).toFixed(1)}k <span className="text-slate-500 text-xs font-normal">(12M)</span></span>
+            <span className="text-[10px] text-slate-500">{output.churn_risk?.churned_customers_12m ?? 0} churned accts</span>
+          </div>
+          <div className="p-2.5 bg-slate-950 rounded-xl border border-slate-800 col-span-2 md:col-span-1">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Churn Risk Rating</span>
+            <span className={`text-sm font-black block mt-0.5 ${output.churn_risk?.risk_level === 'LOW' ? 'text-emerald-400' : output.churn_risk?.risk_level === 'HIGH' ? 'text-rose-400' : 'text-amber-400'}`}>
+              {output.churn_risk?.risk_level} ({output.churn_risk?.risk_score}/100)
+            </span>
+            <span className="text-[10px] text-slate-500">{output.churn_risk?.annualized_churn_pct}% annualized</span>
+          </div>
+        </div>
+      )}
+
       {/* Main Simulator Grid: Controls (Left) + Outcomes & Comparisons (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Categorized Assumptions & Sliders */}
@@ -340,7 +383,7 @@ export const PricingSimulator: React.FC = () => {
               <Sliders className="w-4 h-4 text-emerald-400" />
               GTM & Pricing Controls
             </h3>
-            <span className="text-[11px] text-slate-500 font-mono">14 Case Inputs</span>
+            <span className="text-[11px] text-slate-500 font-mono">15 Case Inputs</span>
           </div>
 
           {/* CATEGORY 1: CASE FACTS */}
@@ -412,12 +455,40 @@ export const PricingSimulator: React.FC = () => {
               </div>
             </div>
 
-            {/* Input 2: Time to Full Price (Ramp Horizon: 3m, 6m, 9m, 12m) */}
+            {/* Input 2: Pilot Duration */}
+            <div>
+              <div className="flex justify-between text-xs font-semibold mb-1">
+                <span className="text-slate-300">2. Pilot Duration</span>
+                <span className="text-emerald-400 font-mono">
+                  {params.pilot_duration_months ?? 2} Mo ({(params.pilot_duration_months ?? 2) * 30} Days)
+                </span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="3"
+                step="1"
+                value={params.pilot_duration_months ?? 2}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  handleSliderChange('pilot_duration_months', val);
+                  handleSliderChange('pilot_duration_days', val * 30);
+                }}
+                className="w-full h-2 bg-slate-800 rounded appearance-none cursor-pointer accent-emerald-500"
+              />
+              <div className="flex justify-between text-[10px] text-slate-500">
+                <span>1 Mo (30d)</span>
+                <span>2 Mo (60d)</span>
+                <span>3 Mo (90d)</span>
+              </div>
+            </div>
+
+            {/* Input 3: Time to Full Price (Ramp Horizon: 3m, 6m, 9m, 12m) */}
             <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2">
               <div className="flex justify-between text-xs font-semibold">
                 <span className="text-slate-300 flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-cyan-400" />
-                  2. Time to Full Price
+                  3. Time to Full Price
                 </span>
                 <span className="text-cyan-400 font-mono font-bold">
                   {params.time_to_full_price_months ?? 6} Months (Full Pricing: M{output?.full_price_start_month ?? 3})
@@ -443,12 +514,12 @@ export const PricingSimulator: React.FC = () => {
               </p>
             </div>
 
-            {/* Input 3: Expansion WAU Threshold Gate */}
+            {/* Input 4: Expansion WAU Threshold Gate */}
             <div className="p-3 bg-emerald-950/20 border border-emerald-800/50 rounded-xl space-y-2">
               <div className="flex justify-between text-xs font-semibold">
                 <span className="text-emerald-300 flex items-center gap-1">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  3. Expansion WAU Threshold
+                  4. Expansion WAU Threshold
                 </span>
                 <span className="text-emerald-400 font-mono font-bold">
                   {Math.round(params.expansion_wau_threshold * 100)}% WAU Gate
@@ -469,10 +540,10 @@ export const PricingSimulator: React.FC = () => {
               </div>
             </div>
 
-            {/* Input 4: Usage Credit Overage Rate */}
+            {/* Input 5: Usage Credit Overage Rate */}
             <div>
               <div className="flex justify-between text-xs font-semibold mb-1">
-                <span className="text-slate-300">4. Usage Credit Rate</span>
+                <span className="text-slate-300">5. Usage Credit Rate</span>
                 <span className="text-emerald-400 font-mono">${params.usage_credit_rate.toFixed(2)}/run</span>
               </div>
               <input
@@ -489,10 +560,10 @@ export const PricingSimulator: React.FC = () => {
               </span>
             </div>
 
-            {/* Input 5: Included Usage Allowance */}
+            {/* Input 6: Included Usage Allowance */}
             <div>
               <div className="flex justify-between text-xs font-semibold mb-1">
-                <span className="text-slate-300">5. Included Monthly Runs</span>
+                <span className="text-slate-300">6. Included Monthly Runs</span>
                 <span className="text-emerald-400 font-mono">{params.workflow_run_allowance} runs/user</span>
               </div>
               <input
@@ -506,10 +577,10 @@ export const PricingSimulator: React.FC = () => {
               />
             </div>
 
-            {/* Input 6: Pilot Users */}
+            {/* Input 7: Pilot Users */}
             <div>
               <div className="flex justify-between text-xs font-semibold mb-1">
-                <span className="text-slate-300">6. Pilot User Headcount</span>
+                <span className="text-slate-300">7. Pilot User Headcount</span>
                 <span className="text-emerald-400 font-mono">{params.pilot_users} users</span>
               </div>
               <input
@@ -523,10 +594,10 @@ export const PricingSimulator: React.FC = () => {
               />
             </div>
 
-            {/* Input 7: Expansion Seat Multiplier */}
+            {/* Input 8: Expansion Seat Multiplier */}
             <div>
               <div className="flex justify-between text-xs font-semibold mb-1">
-                <span className="text-slate-300">7. Expansion Multiplier</span>
+                <span className="text-slate-300">8. Expansion Multiplier</span>
                 <span className="text-emerald-400 font-mono">{params.expansion_seat_multiplier}x ({Math.round(params.pilot_users * params.expansion_seat_multiplier)} seats)</span>
               </div>
               <input
@@ -540,10 +611,10 @@ export const PricingSimulator: React.FC = () => {
               />
             </div>
 
-            {/* Input 8: Pilot-to-Expansion Conversion */}
+            {/* Input 9: Pilot-to-Expansion Conversion */}
             <div>
               <div className="flex justify-between text-xs font-semibold mb-1">
-                <span className="text-slate-300">8. Pilot-to-Expansion Conv.</span>
+                <span className="text-slate-300">9. Pilot-to-Expansion Conv.</span>
                 <span className="text-emerald-400 font-mono">{params.pilot_to_expansion_conversion_pct}%</span>
               </div>
               <input
@@ -557,10 +628,10 @@ export const PricingSimulator: React.FC = () => {
               />
             </div>
 
-            {/* Input 9: Post-Expansion Monthly Churn */}
+            {/* Input 10: Post-Expansion Monthly Churn */}
             <div>
               <div className="flex justify-between text-xs font-semibold mb-1">
-                <span className="text-slate-300">9. Monthly Churn Rate</span>
+                <span className="text-slate-300">10. Monthly Churn Rate</span>
                 <span className="text-amber-400 font-mono">{params.monthly_churn_pct}% / mo</span>
               </div>
               <input
@@ -577,10 +648,10 @@ export const PricingSimulator: React.FC = () => {
               </span>
             </div>
 
-            {/* Input 10: AI Inference Cost per Run */}
+            {/* Input 11: AI Inference Cost per Run */}
             <div>
               <div className="flex justify-between text-xs font-semibold mb-1">
-                <span className="text-slate-300">10. AI Compute Cost (COGS)</span>
+                <span className="text-slate-300">11. AI Compute Cost (COGS)</span>
                 <span className="text-cyan-400 font-mono">${(params.ai_cost_per_run ?? 0.0080).toFixed(4)}/run</span>
               </div>
               <input
@@ -597,10 +668,10 @@ export const PricingSimulator: React.FC = () => {
               </span>
             </div>
 
-            {/* Input 11: Customer Success Cost */}
+            {/* Input 12: Customer Success Cost */}
             <div>
               <div className="flex justify-between text-xs font-semibold mb-1">
-                <span className="text-slate-300">11. Customer Success Cost</span>
+                <span className="text-slate-300">12. Customer Success Cost</span>
                 <span className="text-emerald-400 font-mono">${params.cs_cost_per_customer_month ?? 350}/acct/mo</span>
               </div>
               <input
@@ -614,10 +685,10 @@ export const PricingSimulator: React.FC = () => {
               />
             </div>
 
-            {/* Input 12: Cloud Infrastructure Cost */}
+            {/* Input 13: Cloud Infrastructure Cost */}
             <div>
               <div className="flex justify-between text-xs font-semibold mb-1">
-                <span className="text-slate-300">12. Cloud VPC / KMS Cost</span>
+                <span className="text-slate-300">13. Cloud VPC / KMS Cost</span>
                 <span className="text-emerald-400 font-mono">${params.cloud_cost_per_customer_month ?? 150}/acct/mo</span>
               </div>
               <input
@@ -631,10 +702,10 @@ export const PricingSimulator: React.FC = () => {
               />
             </div>
 
-            {/* Input 13: Other Delivery Cost */}
+            {/* Input 14: Other Delivery Cost */}
             <div>
               <div className="flex justify-between text-xs font-semibold mb-1">
-                <span className="text-slate-300">13. Other Delivery / Setup Cost</span>
+                <span className="text-slate-300">14. Other Delivery / Setup Cost</span>
                 <span className="text-emerald-400 font-mono">${params.other_delivery_cost_per_customer_month ?? 100}/acct/mo</span>
               </div>
               <input
@@ -648,10 +719,10 @@ export const PricingSimulator: React.FC = () => {
               />
             </div>
 
-            {/* Input 14: New Pilots Onboarded per Month */}
+            {/* Input 15: New Pilots Onboarded per Month */}
             <div>
               <div className="flex justify-between text-xs font-semibold mb-1">
-                <span className="text-slate-300">14. New Pilots Per Month</span>
+                <span className="text-slate-300">15. New Pilots Per Month</span>
                 <span className="text-indigo-400 font-mono">{params.new_pilots_per_month} new logos/mo</span>
               </div>
               <input

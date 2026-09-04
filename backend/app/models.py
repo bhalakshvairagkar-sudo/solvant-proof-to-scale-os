@@ -276,6 +276,7 @@ class PricingSimulationOutput(BaseModel):
     revenue_12m: float = 0.0
     revenue_24m: float = 0.0
     pilot_revenue_total_12m: float = 0.0
+    transition_revenue_total_12m: float = 0.0
     expansion_revenue_total_12m: float = 0.0
     usage_revenue_total_12m: float = 0.0
     revenue_growth_y2_vs_y1: float = 0.0

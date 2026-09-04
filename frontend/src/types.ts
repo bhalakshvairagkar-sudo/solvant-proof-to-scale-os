@@ -117,7 +117,7 @@ export interface ExpansionCriteriaStatus {
   retention_met: boolean;
   retention_value: number;
   all_met: boolean;
-  verdict: 'EXPAND' | 'HOLD' | 'INTERVENE';
+  verdict: 'EXPAND' | 'HOLD' | 'INTERVENE' | 'STOP / REASSESS' | string;
   failed_conditions?: string[];
   passed_conditions?: string[];
   trigger_status?: Record<string, boolean>;
@@ -282,6 +282,7 @@ export interface PricingSimulationOutput {
   revenue_12m?: number;
   revenue_24m?: number;
   pilot_revenue_total_12m?: number;
+  transition_revenue_total_12m?: number;
   expansion_revenue_total_12m?: number;
   usage_revenue_total_12m?: number;
   revenue_growth_y2_vs_y1?: number;

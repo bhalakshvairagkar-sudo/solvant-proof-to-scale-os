@@ -52,7 +52,26 @@ def run_pricing_simulation(
     # 30 days -> 1 month pilot, expansion begins Month 2
     # 60 days -> 2 month pilot, expansion begins Month 3
     # 90 days -> 3 month pilot, expansion begins Month 4
-    if params.time_to_full_price_days <= 30 or params.time_to_full_price_months <= 3:
+    if params.time_to_full_price_days == 30:
+        pilot_months = 1
+        full_price_start_month = 2
+    elif params.time_to_full_price_days == 60:
+        pilot_months = 2
+        full_price_start_month = 3
+    elif params.time_to_full_price_days == 90:
+        pilot_months = 3
+        full_price_start_month = 4
+    elif params.pilot_duration_months and params.pilot_duration_months in [1, 2, 3]:
+        pilot_months = params.pilot_duration_months
+        if params.time_to_full_price_months <= 3:
+            full_price_start_month = max(pilot_months + 1, 2)
+        elif params.time_to_full_price_months == 6:
+            full_price_start_month = max(pilot_months + 1, 3)
+        elif params.time_to_full_price_months == 9:
+            full_price_start_month = max(pilot_months + 1, 4)
+        else:
+            full_price_start_month = max(pilot_months + 1, 5)
+    elif params.time_to_full_price_days <= 30 or params.time_to_full_price_months <= 3:
         pilot_months = 1
         full_price_start_month = 2
     elif params.time_to_full_price_days >= 90 or params.time_to_full_price_months == 9:
@@ -64,17 +83,6 @@ def run_pricing_simulation(
     else:
         pilot_months = 2
         full_price_start_month = 3
-
-    # Ensure backwards compatibility for test_time_to_full_price_affects_revenue:
-    if params.time_to_full_price_days == 30:
-        pilot_months = 1
-        full_price_start_month = 2
-    elif params.time_to_full_price_days == 60:
-        pilot_months = 2
-        full_price_start_month = 3
-    elif params.time_to_full_price_days == 90:
-        pilot_months = 3
-        full_price_start_month = 4
 
     months_at_full_price_12m = max(0, 12 - full_price_start_month + 1)
     months_at_full_price_24m = max(0, 24 - full_price_start_month + 1)
@@ -131,6 +139,7 @@ def run_pricing_simulation(
     total_delivery_cost_12m = 0.0
     total_delivery_cost_24m = 0.0
     total_pilot_rev_12m = 0.0
+    total_transition_rev_12m = 0.0
     total_expansion_rev_12m = 0.0
     total_usage_rev_12m = 0.0
     cumulative_churned_accounts_12m = 0.0
@@ -165,14 +174,23 @@ def run_pricing_simulation(
 
         # Revenue computation:
         pilot_mrr = active_pilots * (pilot_price / float(pilot_months))
+        transition_mrr = 0.0
+        # Transition/discount period logic (Paid Pilot -> Transition Discount -> Full-Price Contract)
+        if pilot_months < m < full_price_start_month and effective_conversion > 0:
+            trans_customers = new_pilots_per_month * effective_conversion
+            trans_billable = int(math.floor(trans_customers * expanded_seats_per_customer * actual_wau_rate))
+            # 50% transition discount off full price
+            transition_mrr = round(trans_billable * (full_price_per_user * 0.50), 2)
+
         expanded_base_mrr = active_billable_users * full_price_per_user
         expanded_overage_mrr = active_billable_users * overage_per_user
 
-        total_mrr = pilot_mrr + expanded_base_mrr + expanded_overage_mrr
+        total_mrr = pilot_mrr + transition_mrr + expanded_base_mrr + expanded_overage_mrr
         total_arr = total_mrr * 12.0
 
         if m <= 12:
             total_pilot_rev_12m += pilot_mrr
+            total_transition_rev_12m += transition_mrr
             total_expansion_rev_12m += expanded_base_mrr
             total_usage_rev_12m += expanded_overage_mrr
 
@@ -212,7 +230,7 @@ def run_pricing_simulation(
                 billable_active_users=active_billable_users,
                 licensed_seats=total_expanded_seats + total_pilot_seats,
                 pilot_revenue=round(pilot_mrr, 2),
-                transition_revenue=0.0,
+                transition_revenue=round(transition_mrr, 2),
                 expansion_base_revenue=round(expanded_base_mrr, 2),
                 usage_overage_revenue=round(expanded_overage_mrr, 2),
                 base_mrr=round(pilot_mrr + expanded_base_mrr, 2),
@@ -460,6 +478,7 @@ def run_pricing_simulation(
         revenue_12m=rev_12m,
         revenue_24m=rev_24m,
         pilot_revenue_total_12m=round(total_pilot_rev_12m, 2),
+        transition_revenue_total_12m=round(total_transition_rev_12m, 2),
         expansion_revenue_total_12m=round(total_expansion_rev_12m, 2),
         usage_revenue_total_12m=round(total_usage_rev_12m, 2),
         revenue_growth_y2_vs_y1=growth_y2_vs_y1,
