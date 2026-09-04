@@ -1,0 +1,411 @@
+import React, { useState, useEffect } from 'react';
+import {
+  ShieldCheck,
+  CheckCircle2,
+  AlertTriangle,
+  Lock,
+  Database,
+  FileCode2,
+  Award,
+  Sparkles,
+  Send,
+  RefreshCw,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
+import { TrustCopilotResponse, TrustFactItem } from '../types';
+import { fetchTrustCopilot, fetchTrustFactBase, fetchAdversarialCurveballs } from '../api';
+
+export const TrustCopilot: React.FC = () => {
+  const [facts, setFacts] = useState<TrustFactItem[]>([]);
+  const [adversarialCurveballs, setAdversarialCurveballs] = useState<any[]>([]);
+  const [showAdversarialMode, setShowAdversarialMode] = useState(false);
+  const [selectedQuestion, setSelectedQuestion] = useState(
+    'Where is our financial data stored and who has access?'
+  );
+  const [customQuestion, setCustomQuestion] = useState('');
+  const [response, setResponse] = useState<TrustCopilotResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [showFactBase, setShowFactBase] = useState(false);
+
+  const quickObjections = [
+    {
+      label: '1. Data Residency',
+      q: 'Where is our financial data stored and who has access?',
+    },
+    {
+      label: '2. Model Training',
+      q: 'Do you train AI models on our proprietary ledger and forecast data?',
+    },
+    {
+      label: '3. Vendor Lock-In',
+      q: 'What happens if we terminate? Can we export our commentary and data?',
+    },
+    {
+      label: '4. SOC2 / GDPR Audit (Honest Posture)',
+      q: 'Do you hold a completed SOC2 Type II and GDPR certification?',
+    },
+    {
+      label: '5. Incumbent Leakage',
+      q: 'Can Microsoft or OpenAI inspect our internal financial ledgers through your API?',
+    },
+  ];
+
+  useEffect(() => {
+    loadFacts();
+    fetchAdversarialCurveballs().then(setAdversarialCurveballs);
+    handleAsk(selectedQuestion);
+  }, []);
+
+  const loadFacts = async () => {
+    try {
+      const data = await fetchTrustFactBase();
+      setFacts(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAsk = async (questionToAsk: string) => {
+    setLoading(true);
+    try {
+      const res = await fetchTrustCopilot(questionToAsk);
+      setResponse(res);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleQuickClick = (q: string) => {
+    setSelectedQuestion(q);
+    setCustomQuestion('');
+    handleAsk(q);
+  };
+
+  const handleCustomSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (customQuestion.trim()) {
+      setSelectedQuestion(customQuestion.trim());
+      handleAsk(customQuestion.trim());
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header Banner */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-800/80 text-emerald-300 text-xs font-semibold mb-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              Closed Trust Fact Base & Overclaim Guard
+            </div>
+            <h2 className="text-2xl font-bold text-white tracking-tight">
+              Trust Copilot (Executive Objection Handler)
+            </h2>
+            <p className="text-sm text-slate-400 max-w-2xl mt-1">
+              Plain CFO and CISO language grounded strictly in verified enterprise architecture facts. Follows an immutable 5-step response structure with zero invented certifications.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowAdversarialMode(!showAdversarialMode)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-950/80 hover:bg-amber-900 border border-amber-700/80 text-amber-200 text-xs font-semibold transition"
+            >
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+              <span>{showAdversarialMode ? 'Hide Curveballs' : 'Adversarial Rehearsal Partner'}</span>
+            </button>
+            <button
+              onClick={() => setShowFactBase(!showFactBase)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition"
+            >
+              <Database className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{showFactBase ? 'Hide Fact Base' : 'Inspect Closed Fact Base'}</span>
+              {showFactBase ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Adversarial Rehearsal Partner Mode */}
+      {showAdversarialMode && (
+        <div className="bg-slate-950 border border-amber-800/80 rounded-2xl p-6 shadow-2xl space-y-4 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-400" />
+              <h3 className="font-bold text-white text-sm">
+                Adversarial Partner Rehearsal (Unscripted Multi-Turn Curveballs)
+              </h3>
+            </div>
+            <span className="text-[11px] px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700 font-mono">
+              Live Stage Composure Training
+            </span>
+          </div>
+          <p className="text-xs text-slate-400">
+            A script alone cannot guarantee live composure. Practice how to pivot when an adversarial CISO, CFO, or Procurement Lead follows up aggressively after your opening answer:
+          </p>
+
+          <div className="space-y-4">
+            {adversarialCurveballs.map((ac, i) => (
+              <div
+                key={i}
+                className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3 text-xs"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-amber-400 text-sm">{ac.persona}</span>
+                  <span className="text-[10px] text-slate-500 font-mono">Scenario #{i + 1}</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                  <div className="p-3 bg-slate-950 rounded-lg border border-slate-800">
+                    <span className="font-bold text-slate-400 block mb-1">
+                      1. Initial Objection & Opening:
+                    </span>
+                    <p className="text-slate-200 italic mb-2">"{ac.initial_objection}"</p>
+                    <span className="font-semibold text-emerald-400 block mb-0.5">Solvant Opening:</span>
+                    <p className="text-slate-300">{ac.solvant_opening}</p>
+                  </div>
+
+                  <div className="p-3 bg-amber-950/20 rounded-lg border border-amber-900/60">
+                    <span className="font-bold text-amber-400 block mb-1">
+                      2. Aggressive Curveball Follow-up:
+                    </span>
+                    <p className="text-amber-200 italic mb-2">"{ac.adversarial_followup}"</p>
+                    <span className="font-semibold text-indigo-400 block mb-0.5">Stage Rebuttal:</span>
+                    <p className="text-slate-200 leading-relaxed font-medium">{ac.adversarial_rebuttal}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Closed Fact Base Inspector Drawer */}
+      {showFactBase && (
+        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex items-center gap-2">
+              <Lock className="w-4 h-4 text-emerald-400" />
+              <h3 className="font-bold text-white text-sm">
+                Closed Trust Fact Base (Immutable Single Source of Truth)
+              </h3>
+            </div>
+            <span className="text-[11px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono">
+              Overclaim Guard Active
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {facts.map((fact) => (
+              <div
+                key={fact.id}
+                className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 text-xs space-y-2"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-white text-sm">{fact.title}</span>
+                  <span
+                    className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
+                      fact.status === 'ACTIVE'
+                        ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                        : 'bg-amber-950 text-amber-300 border border-amber-800'
+                    }`}
+                  >
+                    {fact.status}
+                  </span>
+                </div>
+                <p className="text-slate-300 leading-relaxed">{fact.detail}</p>
+                <div className="pt-2 border-t border-slate-800/80 text-[11px] text-amber-300/90">
+                  <strong className="text-slate-400">Strict Limitation:</strong> {fact.limits}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Objection Chips Selector */}
+      <div className="space-y-2">
+        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
+          Select Common Enterprise CISO / CFO Objections:
+        </span>
+        <div className="flex flex-wrap gap-2">
+          {quickObjections.map((obj, i) => (
+            <button
+              key={i}
+              onClick={() => handleQuickClick(obj.q)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition text-left flex items-center gap-2 ${
+                selectedQuestion === obj.q
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
+                  : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
+              }`}
+            >
+              <span>{obj.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Custom Query Box for Live Judges */}
+      <form onSubmit={handleCustomSubmit} className="flex gap-2">
+        <input
+          type="text"
+          placeholder="Ask any curveball CISO / CFO objection live..."
+          value={customQuestion}
+          onChange={(e) => setCustomQuestion(e.target.value)}
+          className="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 shadow-inner"
+        />
+        <button
+          type="submit"
+          disabled={loading}
+          className="flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition shadow-lg shadow-emerald-600/20 disabled:opacity-50"
+        >
+          <Send className="w-3.5 h-3.5" />
+          <span>Ask Copilot</span>
+        </button>
+      </form>
+
+      {/* 5-Step Structured Response Presentation */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        {/* Response Meta Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <div className="flex items-center gap-2">
+            <h3 className="font-bold text-white text-base">
+              Structured 5-Step Defense
+            </h3>
+            <span className="text-xs text-slate-400">
+              ("{selectedQuestion}")
+            </span>
+          </div>
+
+          {/* Overclaim Guard Badge */}
+          {response && (
+            <div className="flex items-center gap-2">
+              <span
+                className={`text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1.5 ${
+                  response.overclaim_guard.status === 'BOUNDARY_ENFORCED'
+                    ? 'bg-amber-950 text-amber-300 border border-amber-700'
+                    : 'bg-emerald-950 text-emerald-300 border border-emerald-700'
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>
+                  Overclaim Guard: {response.overclaim_guard.facts_grounded_count} Verified Facts Grounded
+                </span>
+              </span>
+
+              <span
+                className={`text-xs px-2 py-0.5 rounded font-mono ${
+                  response.is_live_llm
+                    ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                    : 'bg-indigo-950 text-indigo-300 border border-indigo-800'
+                }`}
+              >
+                {response.is_live_llm ? 'Groq Live' : 'Verified Cache'}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {loading ? (
+          <div className="py-12 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
+            <RefreshCw className="w-4 h-4 animate-spin text-emerald-400" />
+            <span>Formulating grounded response...</span>
+          </div>
+        ) : response ? (
+          <div className="space-y-4">
+            {/* Step 1: Acknowledge */}
+            <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-4">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                <span className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 text-[10px]">
+                  1
+                </span>
+                Step 1: Acknowledge (Executive Empathy)
+              </div>
+              <p className="text-xs text-slate-200 leading-relaxed font-medium pl-7">
+                {response.step1_acknowledge}
+              </p>
+            </div>
+
+            {/* Step 2: Clarify */}
+            <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-4">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                <span className="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 text-[10px]">
+                  2
+                </span>
+                Step 2: Clarify (Define Technical Boundary)
+              </div>
+              <p className="text-xs text-slate-200 leading-relaxed font-medium pl-7">
+                {response.step2_clarify}
+              </p>
+            </div>
+
+            {/* Step 3: Evidence */}
+            <div className="bg-emerald-950/20 border border-emerald-800/60 rounded-xl p-4">
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider mb-1">
+                <span className="w-5 h-5 rounded-full bg-emerald-900 flex items-center justify-center text-emerald-300 text-[10px]">
+                  3
+                </span>
+                Step 3: Evidence (Strictly From Fact Base)
+              </div>
+              <p className="text-xs text-emerald-200/90 leading-relaxed font-medium pl-7">
+                {response.step3_evidence}
+              </p>
+            </div>
+
+            {/* Step 4: Limit the Claim */}
+            <div className="bg-amber-950/20 border border-amber-800/60 rounded-xl p-4">
+              <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">
+                <span className="w-5 h-5 rounded-full bg-amber-900 flex items-center justify-center text-amber-300 text-[10px]">
+                  4
+                </span>
+                Step 4: Limit the Claim (Honest Posture — No Overclaiming)
+              </div>
+              <p className="text-xs text-amber-200/90 leading-relaxed font-medium pl-7">
+                {response.step4_claim_limits}
+              </p>
+            </div>
+
+            {/* Step 5: Risk-Reduction Mechanism */}
+            <div className="bg-indigo-950/20 border border-indigo-800/60 rounded-xl p-4">
+              <div className="flex items-center gap-2 text-xs font-bold text-indigo-400 uppercase tracking-wider mb-1">
+                <span className="w-5 h-5 rounded-full bg-indigo-900 flex items-center justify-center text-indigo-300 text-[10px]">
+                  5
+                </span>
+                Step 5: Risk-Reduction Mechanism (Commercial & Data Gating)
+              </div>
+              <p className="text-xs text-indigo-200/90 leading-relaxed font-medium pl-7">
+                {response.step5_risk_reduction}
+              </p>
+            </div>
+
+            {/* Overclaim Guard Explicit Callouts */}
+            <div className="mt-4 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2 text-slate-400">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Verified Claims:</span>
+                <span className="text-slate-200">
+                  {response.overclaim_guard.verified_claims.join(' • ')}
+                </span>
+              </div>
+
+              {response.overclaim_guard.unsupported_or_limited_claims.length > 0 && (
+                <div className="flex items-center gap-2 text-amber-400">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span>Enforced Boundary:</span>
+                  <span className="text-amber-200">
+                    {response.overclaim_guard.unsupported_or_limited_claims.join(' • ')}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+};
