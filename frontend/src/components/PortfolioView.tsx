@@ -99,7 +99,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-              Pinned Demo Anchors (Live Hackathon Evaluation)
+              Pinned Demo Anchors
             </h3>
           </div>
           <span className="text-[10px] font-mono text-slate-400">

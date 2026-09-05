@@ -5,7 +5,6 @@ import {
   Cpu,
   RefreshCw,
   Sliders,
-  Award,
   Layers,
   Sparkles,
   HelpCircle,
@@ -153,13 +152,6 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <RefreshCw className="w-3.5 h-3.5" />
               <span>Reset Data</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('walkthrough')}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 transition"
-            >
-              <Award className="w-3.5 h-3.5" />
-              <span>Judge Script (8 Slides)</span>
             </button>
           </div>
         </div>
